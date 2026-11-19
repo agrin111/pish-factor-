@@ -1,0 +1,485 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Core Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerified() && request.auth.token.email == 'agrin.sazan@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerified() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true
+      );
+    }
+
+    function isActiveStaff() {
+      return isAdmin() || (
+        isVerified() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'sales']
+      );
+    }
+
+    // --- Validation Helpers ---
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'isActive', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'isActive', 'phone', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.role in ['admin', 'sales'] &&
+        data.isActive is bool &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 40)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidStaffInvite(data) {
+      return data.keys().hasAll(['email', 'displayName', 'role', 'isActive', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['email', 'displayName', 'role', 'isActive', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.role in ['admin', 'sales'] &&
+        data.isActive is bool &&
+        data.createdByUid is string && data.createdByUid.size() >= 1 && data.createdByUid.size() <= 128 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidProductCategory(data) {
+      return data.keys().hasAll(['name', 'sortOrder', 'isActive', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['name', 'description', 'sortOrder', 'isActive', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 300)) &&
+        data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 10000 &&
+        data.isActive is bool &&
+        data.createdByUid is string && data.createdByUid.size() >= 1 && data.createdByUid.size() <= 128 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['sku', 'name', 'categoryId', 'categoryName', 'factory', 'unit', 'weightPerUnitKg', 'unitPrice', 'isActive', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['sku', 'name', 'categoryId', 'categoryName', 'factory', 'specs', 'size', 'thickness', 'length', 'unit', 'weightPerUnitKg', 'unitPrice', 'description', 'isActive', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        data.sku is string && data.sku.size() >= 1 && data.sku.size() <= 64 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 160 &&
+        data.categoryId is string && data.categoryId.size() >= 1 && data.categoryId.size() <= 128 &&
+        data.categoryName is string && data.categoryName.size() >= 1 && data.categoryName.size() <= 80 &&
+        data.factory is string && data.factory.size() >= 1 && data.factory.size() <= 120 &&
+        (!('specs' in data) || (data.specs is string && data.specs.size() <= 240)) &&
+        (!('size' in data) || (data.size is string && data.size.size() <= 80)) &&
+        (!('thickness' in data) || (data.thickness is string && data.thickness.size() <= 60)) &&
+        (!('length' in data) || (data.length is string && data.length.size() <= 60)) &&
+        data.unit in ['کیلوگرم', 'شاخه', 'متر', 'برگ', 'تن'] &&
+        data.weightPerUnitKg is number && data.weightPerUnitKg >= 0 &&
+        data.unitPrice is number && data.unitPrice >= 0 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+        data.isActive is bool &&
+        data.createdByUid is string && data.createdByUid.size() >= 1 && data.createdByUid.size() <= 128 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCustomer(data) {
+      return data.keys().hasAll(['name', 'mobile', 'customerType', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['name', 'mobile', 'secondaryPhone', 'companyOrProject', 'customerType', 'nationalId', 'economicCode', 'city', 'address', 'notes', 'createdByUid', 'createdAt', 'updatedAt']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 140 &&
+        data.mobile is string && data.mobile.size() >= 5 && data.mobile.size() <= 30 &&
+        (!('secondaryPhone' in data) || (data.secondaryPhone is string && data.secondaryPhone.size() <= 30)) &&
+        (!('companyOrProject' in data) || (data.companyOrProject is string && data.companyOrProject.size() <= 180)) &&
+        data.customerType in ['حقیقی', 'حقوقی'] &&
+        (!('nationalId' in data) || (data.nationalId is string && data.nationalId.size() <= 30)) &&
+        (!('economicCode' in data) || (data.economicCode is string && data.economicCode.size() <= 30)) &&
+        (!('city' in data) || (data.city is string && data.city.size() <= 80)) &&
+        (!('address' in data) || (data.address is string && data.address.size() <= 400)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 600)) &&
+        data.createdByUid is string && data.createdByUid.size() >= 1 && data.createdByUid.size() <= 128 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidQuotation(data) {
+      return data.keys().hasAll([
+          'quotationNumber', 'issueDateShamsi', 'validUntilShamsi', 'validDays',
+          'customerId', 'customerName', 'status', 'currency', 'includeVat', 'vatRate',
+          'itemsSubtotal', 'transportCost', 'discountAmount', 'vatAmount', 'grandTotal',
+          'totalWeightKg', 'itemCount', 'createdByUid', 'createdByName', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'quotationNumber', 'issueDateShamsi', 'validUntilShamsi', 'validDays',
+          'customerId', 'customerName', 'customerMobile', 'customerCompanyOrProject', 'customerAddress',
+          'status', 'currency', 'includeVat', 'vatRate',
+          'itemsSubtotal', 'transportCost', 'discountAmount', 'vatAmount', 'grandTotal',
+          'totalWeightKg', 'itemCount', 'paymentTerms', 'deliveryTerms', 'notes',
+          'createdByUid', 'createdByName', 'createdAt', 'updatedAt'
+        ]) &&
+        data.quotationNumber is string && data.quotationNumber.size() >= 3 && data.quotationNumber.size() <= 40 &&
+        data.issueDateShamsi is string && data.issueDateShamsi.size() >= 8 && data.issueDateShamsi.size() <= 20 &&
+        data.validUntilShamsi is string && data.validUntilShamsi.size() >= 8 && data.validUntilShamsi.size() <= 20 &&
+        data.validDays is number && data.validDays >= 1 && data.validDays <= 365 &&
+        data.customerId is string && data.customerId.size() >= 1 && data.customerId.size() <= 128 &&
+        data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 140 &&
+        (!('customerMobile' in data) || (data.customerMobile is string && data.customerMobile.size() <= 30)) &&
+        (!('customerCompanyOrProject' in data) || (data.customerCompanyOrProject is string && data.customerCompanyOrProject.size() <= 180)) &&
+        (!('customerAddress' in data) || (data.customerAddress is string && data.customerAddress.size() <= 400)) &&
+        data.status in ['پیش‌نویس', 'ارسال‌شده', 'تاییدشده', 'لغوشده', 'منقضی‌شده'] &&
+        data.currency in ['تومان', 'ریال'] &&
+        data.includeVat is bool &&
+        data.vatRate is number && data.vatRate >= 0 && data.vatRate <= 50 &&
+        data.itemsSubtotal is number && data.itemsSubtotal >= 0 &&
+        data.transportCost is number && data.transportCost >= 0 &&
+        data.discountAmount is number && data.discountAmount >= 0 &&
+        data.vatAmount is number && data.vatAmount >= 0 &&
+        data.grandTotal is number && data.grandTotal >= 0 &&
+        data.totalWeightKg is number && data.totalWeightKg >= 0 &&
+        data.itemCount is number && data.itemCount >= 0 && data.itemCount <= 200 &&
+        (!('paymentTerms' in data) || (data.paymentTerms is string && data.paymentTerms.size() <= 500)) &&
+        (!('deliveryTerms' in data) || (data.deliveryTerms is string && data.deliveryTerms.size() <= 500)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        data.createdByUid is string && data.createdByUid.size() >= 1 && data.createdByUid.size() <= 128 &&
+        data.createdByName is string && data.createdByName.size() >= 1 && data.createdByName.size() <= 120 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidQuotationItem(data) {
+      return data.keys().hasAll(['rowIndex', 'productName', 'unit', 'quantity', 'weightPerUnitKg', 'unitPrice', 'lineTotal', 'createdByUid', 'createdAt']) &&
+        data.keys().hasOnly(['rowIndex', 'productId', 'sku', 'productName', 'specs', 'size', 'unit', 'quantity', 'weightPerUnitKg', 'unitPrice', 'lineTotal', 'createdByUid', 'createdAt']) &&
+        data.rowIndex is number && data.rowIndex >= 1 && data.rowIndex <= 500 &&
+        (!('productId' in data) || (data.productId is string && data.productId.size() <= 128)) &&
+        (!('sku' in data) || (data.sku is string && data.sku.size() <= 64)) &&
+        data.productName is string && data.productName.size() >= 1 && data.productName.size() <= 180 &&
+        (!('specs' in data) || (data.specs is string && data.specs.size() <= 240)) &&
+        (!('size' in data) || (data.size is string && data.size.size() <= 80)) &&
+        data.unit in ['کیلوگرم', 'شاخه', 'متر', 'برگ', 'تن'] &&
+        data.quantity is number && data.quantity > 0 &&
+        data.weightPerUnitKg is number && data.weightPerUnitKg >= 0 &&
+        data.unitPrice is number && data.unitPrice >= 0 &&
+        data.lineTotal is number && data.lineTotal >= 0 &&
+        data.createdByUid is string && data.createdByUid.size() >= 1 && data.createdByUid.size() <= 128 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidStatusHistory(data) {
+      return data.keys().hasAll(['fromStatus', 'toStatus', 'changedByUid', 'changedByName', 'changedAt']) &&
+        data.keys().hasOnly(['fromStatus', 'toStatus', 'note', 'changedByUid', 'changedByName', 'changedAt']) &&
+        data.fromStatus is string && data.fromStatus.size() <= 40 &&
+        data.toStatus in ['پیش‌نویس', 'ارسال‌شده', 'تاییدشده', 'لغوشده', 'منقضی‌شده'] &&
+        (!('note' in data) || (data.note is string && data.note.size() <= 300)) &&
+        data.changedByUid is string && data.changedByUid.size() >= 1 && data.changedByUid.size() <= 128 &&
+        data.changedByName is string && data.changedByName.size() >= 1 && data.changedByName.size() <= 120 &&
+        data.changedAt is timestamp;
+    }
+
+    function isValidCompanySettings(data) {
+      return data.keys().hasAll(['companyName', 'currency', 'defaultVatRate', 'defaultIncludeVat', 'defaultValidDays', 'updatedByUid', 'updatedAt']) &&
+        data.keys().hasOnly([
+          'companyName', 'subtitle', 'logoDataUrl', 'phone', 'email', 'website',
+          'address', 'nationalId', 'economicCode', 'registrationNo', 'bankInfo',
+          'defaultPaymentTerms', 'defaultDeliveryTerms', 'defaultNotes', 'disclaimerText',
+          'currency', 'defaultVatRate', 'defaultIncludeVat', 'defaultValidDays',
+          'updatedByUid', 'updatedAt'
+        ]) &&
+        data.companyName is string && data.companyName.size() >= 1 && data.companyName.size() <= 160 &&
+        (!('subtitle' in data) || (data.subtitle is string && data.subtitle.size() <= 240)) &&
+        (!('logoDataUrl' in data) || (data.logoDataUrl is string && data.logoDataUrl.size() <= 60000)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 60)) &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 140)) &&
+        (!('website' in data) || (data.website is string && data.website.size() <= 140)) &&
+        (!('address' in data) || (data.address is string && data.address.size() <= 400)) &&
+        (!('nationalId' in data) || (data.nationalId is string && data.nationalId.size() <= 40)) &&
+        (!('economicCode' in data) || (data.economicCode is string && data.economicCode.size() <= 40)) &&
+        (!('registrationNo' in data) || (data.registrationNo is string && data.registrationNo.size() <= 40)) &&
+        (!('bankInfo' in data) || (data.bankInfo is string && data.bankInfo.size() <= 400)) &&
+        (!('defaultPaymentTerms' in data) || (data.defaultPaymentTerms is string && data.defaultPaymentTerms.size() <= 500)) &&
+        (!('defaultDeliveryTerms' in data) || (data.defaultDeliveryTerms is string && data.defaultDeliveryTerms.size() <= 500)) &&
+        (!('defaultNotes' in data) || (data.defaultNotes is string && data.defaultNotes.size() <= 800)) &&
+        (!('disclaimerText' in data) || (data.disclaimerText is string && data.disclaimerText.size() <= 1000)) &&
+        data.currency in ['تومان', 'ریال'] &&
+        data.defaultVatRate is number && data.defaultVatRate >= 0 && data.defaultVatRate <= 50 &&
+        data.defaultIncludeVat is bool &&
+        data.defaultValidDays is number && data.defaultValidDays >= 1 && data.defaultValidDays <= 365 &&
+        data.updatedByUid is string && data.updatedByUid.size() >= 1 && data.updatedByUid.size() <= 128 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['action', 'entityType', 'entityId', 'summary', 'actorUid', 'actorName', 'createdAt']) &&
+        data.keys().hasOnly(['action', 'entityType', 'entityId', 'summary', 'actorUid', 'actorName', 'createdAt']) &&
+        data.action is string && data.action.size() >= 1 && data.action.size() <= 80 &&
+        data.entityType is string && data.entityType.size() >= 1 && data.entityType.size() <= 60 &&
+        data.entityId is string && data.entityId.size() >= 1 && data.entityId.size() <= 128 &&
+        data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 400 &&
+        data.actorUid is string && data.actorUid.size() >= 1 && data.actorUid.size() <= 128 &&
+        data.actorName is string && data.actorName.size() >= 1 && data.actorName.size() <= 120 &&
+        data.createdAt is timestamp;
+    }
+
+    function canModifyQuotationParent(quotationId) {
+      let parent = get(/databases/$(database)/documents/quotations/$(quotationId)).data;
+      return isAdmin() || (
+        parent.createdByUid == request.auth.uid &&
+        !(parent.status in ['تاییدشده', 'لغوشده'])
+      );
+    }
+
+    // --- Collection Rules ---
+
+    // Connection test doc
+    match /test/connection {
+      allow get: if isSignedIn();
+    }
+
+    // Users
+    match /users/{userId} {
+      allow get: if isVerified() && isValidId(userId) && (userId == request.auth.uid || isAdmin());
+      allow list: if isBootstrappedAdmin() || (isVerified() && existing().uid == request.auth.uid);
+      allow create: if isVerified() && isValidId(userId) && isValidUserProfile(incoming()) &&
+        userId == request.auth.uid &&
+        incoming().uid == request.auth.uid &&
+        incoming().email == request.auth.token.email &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          (isBootstrappedAdmin() && incoming().role == 'admin' && incoming().isActive == true) ||
+          (incoming().role == 'sales' && incoming().isActive == true)
+        );
+      allow update: if isVerified() && isValidId(userId) && isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().email == existing().email &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'isActive', 'phone', 'updatedAt'])) ||
+          (userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'phone', 'updatedAt']))
+        );
+      allow delete: if false;
+    }
+
+    // Staff invites
+    match /staff_invites/{inviteId} {
+      allow get: if isVerified() && isValidId(inviteId) && (isAdmin() || existing().email == request.auth.token.email);
+      allow list: if isBootstrappedAdmin() || (isVerified() && existing().email == request.auth.token.email);
+      allow create: if isAdmin() && isValidId(inviteId) && isValidStaffInvite(incoming()) &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(inviteId) && isValidStaffInvite(incoming()) &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'isActive', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(inviteId);
+    }
+
+    // Product Categories
+    match /product_categories/{categoryId} {
+      allow get: if isActiveStaff() && isValidId(categoryId);
+      allow list: if isBootstrappedAdmin() || (isVerified() && existing().isActive == true);
+      allow create: if isAdmin() && isValidId(categoryId) && isValidProductCategory(incoming()) &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(categoryId) && isValidProductCategory(incoming()) &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'sortOrder', 'isActive', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(categoryId);
+    }
+
+    // Products
+    match /products/{productId} {
+      allow get: if isActiveStaff() && isValidId(productId);
+      allow list: if isBootstrappedAdmin() || (isVerified() && existing().isActive == true);
+      allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'sku', 'name', 'categoryId', 'categoryName', 'factory', 'specs', 'size',
+          'thickness', 'length', 'unit', 'weightPerUnitKg', 'unitPrice', 'description', 'isActive', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    // Customers
+    match /customers/{customerId} {
+      allow get: if isActiveStaff() && isValidId(customerId);
+      allow list: if isBootstrappedAdmin() || (isVerified() && existing().createdByUid == request.auth.uid);
+      allow create: if isActiveStaff() && isValidId(customerId) && isValidCustomer(incoming()) &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isActiveStaff() && isValidId(customerId) && isValidCustomer(incoming()) &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || existing().createdByUid == request.auth.uid) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'mobile', 'secondaryPhone', 'companyOrProject', 'customerType',
+          'nationalId', 'economicCode', 'city', 'address', 'notes', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(customerId);
+    }
+
+    // Quotations
+    match /quotations/{quotationId} {
+      allow get: if isActiveStaff() && isValidId(quotationId) && (isAdmin() || existing().createdByUid == request.auth.uid);
+      allow list: if isBootstrappedAdmin() || (isVerified() && existing().createdByUid == request.auth.uid);
+      allow create: if isActiveStaff() && isValidId(quotationId) && isValidQuotation(incoming()) &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/customers/$(incoming().customerId));
+      allow update: if isActiveStaff() && isValidId(quotationId) && isValidQuotation(incoming()) &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdByName == existing().createdByName &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().createdByUid == request.auth.uid &&
+            !(existing().status in ['تاییدشده', 'لغوشده'])
+          )
+        ) &&
+        (
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'issueDateShamsi', 'validUntilShamsi', 'validDays', 'customerId', 'customerName',
+              'customerMobile', 'customerCompanyOrProject', 'customerAddress', 'status',
+              'currency', 'includeVat', 'vatRate', 'itemsSubtotal', 'transportCost',
+              'discountAmount', 'vatAmount', 'grandTotal', 'totalWeightKg', 'itemCount',
+              'paymentTerms', 'deliveryTerms', 'notes', 'updatedAt'
+            ])
+          ) ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+      allow delete: if isAdmin() && isValidId(quotationId);
+
+      // Quotation Snapshot Line Items (Master Gate)
+      match /items/{itemId} {
+        allow get: if isActiveStaff() && isValidId(quotationId) && isValidId(itemId) &&
+          (isAdmin() || get(/databases/$(database)/documents/quotations/$(quotationId)).data.createdByUid == request.auth.uid);
+        allow list: if isBootstrappedAdmin() || (isVerified() && existing().createdByUid == request.auth.uid);
+        allow create: if isActiveStaff() && isValidId(quotationId) && isValidId(itemId) && isValidQuotationItem(incoming()) &&
+          incoming().createdByUid == request.auth.uid &&
+          incoming().createdAt == request.time &&
+          (
+            (exists(/databases/$(database)/documents/quotations/$(quotationId)) && canModifyQuotationParent(quotationId)) ||
+            existsAfter(/databases/$(database)/documents/quotations/$(quotationId))
+          );
+        allow update: if isActiveStaff() && isValidId(quotationId) && isValidId(itemId) && isValidQuotationItem(incoming()) &&
+          incoming().createdByUid == existing().createdByUid &&
+          incoming().createdAt == existing().createdAt &&
+          canModifyQuotationParent(quotationId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'rowIndex', 'productId', 'sku', 'productName', 'specs', 'size',
+            'unit', 'quantity', 'weightPerUnitKg', 'unitPrice', 'lineTotal'
+          ]);
+        allow delete: if isActiveStaff() && isValidId(quotationId) && isValidId(itemId) &&
+          canModifyQuotationParent(quotationId);
+      }
+
+      // Quotation Status History (Master Gate)
+      match /status_history/{historyId} {
+        allow get: if isActiveStaff() && isValidId(quotationId) && isValidId(historyId) &&
+          (isAdmin() || get(/databases/$(database)/documents/quotations/$(quotationId)).data.createdByUid == request.auth.uid);
+        allow list: if isBootstrappedAdmin() || (isVerified() && existing().changedByUid == request.auth.uid);
+        allow create: if isActiveStaff() && isValidId(quotationId) && isValidId(historyId) && isValidStatusHistory(incoming()) &&
+          incoming().changedByUid == request.auth.uid &&
+          incoming().changedAt == request.time &&
+          (
+            (exists(/databases/$(database)/documents/quotations/$(quotationId)) &&
+              (isAdmin() || get(/databases/$(database)/documents/quotations/$(quotationId)).data.createdByUid == request.auth.uid)) ||
+            existsAfter(/databases/$(database)/documents/quotations/$(quotationId))
+          );
+        allow update, delete: if false;
+      }
+    }
+
+    // Company Settings
+    match /company_settings/{settingId} {
+      allow get: if isActiveStaff() && isValidId(settingId);
+      allow create: if isAdmin() && isValidId(settingId) && isValidCompanySettings(incoming()) &&
+        incoming().updatedByUid == request.auth.uid &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(settingId) && isValidCompanySettings(incoming()) &&
+        incoming().updatedByUid == request.auth.uid &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'companyName', 'subtitle', 'logoDataUrl', 'phone', 'email', 'website',
+          'address', 'nationalId', 'economicCode', 'registrationNo', 'bankInfo',
+          'defaultPaymentTerms', 'defaultDeliveryTerms', 'defaultNotes', 'disclaimerText',
+          'currency', 'defaultVatRate', 'defaultIncludeVat', 'defaultValidDays',
+          'updatedByUid', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    // Atomic Sequence Counters
+    match /counters/{counterId} {
+      allow get: if isActiveStaff() && isValidId(counterId);
+      allow create: if isActiveStaff() && isValidId(counterId) &&
+        incoming().keys().hasAll(['lastNumber', 'updatedAt']) &&
+        incoming().keys().hasOnly(['lastNumber', 'updatedAt']) &&
+        incoming().lastNumber is number && incoming().lastNumber >= 1000 &&
+        incoming().updatedAt == request.time;
+      allow update: if isActiveStaff() && isValidId(counterId) &&
+        incoming().keys().hasAll(['lastNumber', 'updatedAt']) &&
+        incoming().keys().hasOnly(['lastNumber', 'updatedAt']) &&
+        incoming().lastNumber is number &&
+        incoming().lastNumber == existing().lastNumber + 1 &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['lastNumber', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    // Immutable Audit Logs
+    match /audit_logs/{logId} {
+      allow get: if isAdmin() && isValidId(logId);
+      allow list: if isBootstrappedAdmin();
+      allow create: if isActiveStaff() && isValidId(logId) && isValidAuditLog(incoming()) &&
+        incoming().actorUid == request.auth.uid &&
+        incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}

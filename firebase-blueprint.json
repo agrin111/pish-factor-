@@ -1,0 +1,288 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated staff user profile and role assignment.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "role": { "type": "string", "enum": ["admin", "sales"] },
+        "isActive": { "type": "boolean" },
+        "phone": { "type": "string", "maxLength": 40 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "isActive", "createdAt", "updatedAt"]
+    },
+    "StaffInvite": {
+      "title": "StaffInvite",
+      "description": "Admin-managed role assignment for invited staff emails.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "role": { "type": "string", "enum": ["admin", "sales"] },
+        "isActive": { "type": "boolean" },
+        "createdByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "displayName", "role", "isActive", "createdByUid", "createdAt", "updatedAt"]
+    },
+    "ProductCategory": {
+      "title": "ProductCategory",
+      "description": "Steel product category classification.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 300 },
+        "sortOrder": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "sortOrder", "isActive", "createdByUid", "createdAt", "updatedAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Steel product catalog item with technical specs and pricing.",
+      "type": "object",
+      "properties": {
+        "sku": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "categoryId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "categoryName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "factory": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "specs": { "type": "string", "maxLength": 240 },
+        "size": { "type": "string", "maxLength": 80 },
+        "thickness": { "type": "string", "maxLength": 60 },
+        "length": { "type": "string", "maxLength": 60 },
+        "unit": { "type": "string", "enum": ["کیلوگرم", "شاخه", "متر", "برگ", "تن"] },
+        "weightPerUnitKg": { "type": "number" },
+        "unitPrice": { "type": "number" },
+        "description": { "type": "string", "maxLength": 500 },
+        "isActive": { "type": "boolean" },
+        "createdByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sku", "name", "categoryId", "categoryName", "factory", "unit", "weightPerUnitKg", "unitPrice", "isActive", "createdByUid", "createdAt", "updatedAt"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer or corporate buyer profile.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "mobile": { "type": "string", "minLength": 5, "maxLength": 30 },
+        "secondaryPhone": { "type": "string", "maxLength": 30 },
+        "companyOrProject": { "type": "string", "maxLength": 180 },
+        "customerType": { "type": "string", "enum": ["حقیقی", "حقوقی"] },
+        "nationalId": { "type": "string", "maxLength": 30 },
+        "economicCode": { "type": "string", "maxLength": 30 },
+        "city": { "type": "string", "maxLength": 80 },
+        "address": { "type": "string", "maxLength": 400 },
+        "notes": { "type": "string", "maxLength": 600 },
+        "createdByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "mobile", "customerType", "createdByUid", "createdAt", "updatedAt"]
+    },
+    "Quotation": {
+      "title": "Quotation",
+      "description": "Proforma invoice header and financial summary.",
+      "type": "object",
+      "properties": {
+        "quotationNumber": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "issueDateShamsi": { "type": "string", "minLength": 8, "maxLength": 20 },
+        "validUntilShamsi": { "type": "string", "minLength": 8, "maxLength": 20 },
+        "validDays": { "type": "number" },
+        "customerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "customerName": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "customerMobile": { "type": "string", "maxLength": 30 },
+        "customerCompanyOrProject": { "type": "string", "maxLength": 180 },
+        "customerAddress": { "type": "string", "maxLength": 400 },
+        "status": { "type": "string", "enum": ["پیش‌نویس", "ارسال‌شده", "تاییدشده", "لغوشده", "منقضی‌شده"] },
+        "currency": { "type": "string", "enum": ["تومان", "ریال"] },
+        "includeVat": { "type": "boolean" },
+        "vatRate": { "type": "number" },
+        "itemsSubtotal": { "type": "number" },
+        "transportCost": { "type": "number" },
+        "discountAmount": { "type": "number" },
+        "vatAmount": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "totalWeightKg": { "type": "number" },
+        "itemCount": { "type": "number" },
+        "paymentTerms": { "type": "string", "maxLength": 500 },
+        "deliveryTerms": { "type": "string", "maxLength": 500 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "createdByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdByName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "quotationNumber",
+        "issueDateShamsi",
+        "validUntilShamsi",
+        "validDays",
+        "customerId",
+        "customerName",
+        "status",
+        "currency",
+        "includeVat",
+        "vatRate",
+        "itemsSubtotal",
+        "transportCost",
+        "discountAmount",
+        "vatAmount",
+        "grandTotal",
+        "totalWeightKg",
+        "itemCount",
+        "createdByUid",
+        "createdByName",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "QuotationItem": {
+      "title": "QuotationItem",
+      "description": "Immutable snapshot line item belonging to a quotation.",
+      "type": "object",
+      "properties": {
+        "rowIndex": { "type": "number" },
+        "productId": { "type": "string", "maxLength": 128 },
+        "sku": { "type": "string", "maxLength": 64 },
+        "productName": { "type": "string", "minLength": 1, "maxLength": 180 },
+        "specs": { "type": "string", "maxLength": 240 },
+        "size": { "type": "string", "maxLength": 80 },
+        "unit": { "type": "string", "enum": ["کیلوگرم", "شاخه", "متر", "برگ", "تن"] },
+        "quantity": { "type": "number" },
+        "weightPerUnitKg": { "type": "number" },
+        "unitPrice": { "type": "number" },
+        "lineTotal": { "type": "number" },
+        "createdByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["rowIndex", "productName", "unit", "quantity", "weightPerUnitKg", "unitPrice", "lineTotal", "createdByUid", "createdAt"]
+    },
+    "QuotationStatusHistory": {
+      "title": "QuotationStatusHistory",
+      "description": "Status change log entry for a quotation.",
+      "type": "object",
+      "properties": {
+        "fromStatus": { "type": "string", "maxLength": 40 },
+        "toStatus": { "type": "string", "enum": ["پیش‌نویس", "ارسال‌شده", "تاییدشده", "لغوشده", "منقضی‌شده"] },
+        "note": { "type": "string", "maxLength": 300 },
+        "changedByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "changedByName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "changedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fromStatus", "toStatus", "changedByUid", "changedByName", "changedAt"]
+    },
+    "CompanySettings": {
+      "title": "CompanySettings",
+      "description": "Configurable company identity, banking, and quotation defaults.",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "subtitle": { "type": "string", "maxLength": 240 },
+        "logoDataUrl": { "type": "string", "maxLength": 60000 },
+        "phone": { "type": "string", "maxLength": 60 },
+        "email": { "type": "string", "maxLength": 140 },
+        "website": { "type": "string", "maxLength": 140 },
+        "address": { "type": "string", "maxLength": 400 },
+        "nationalId": { "type": "string", "maxLength": 40 },
+        "economicCode": { "type": "string", "maxLength": 40 },
+        "registrationNo": { "type": "string", "maxLength": 40 },
+        "bankInfo": { "type": "string", "maxLength": 400 },
+        "defaultPaymentTerms": { "type": "string", "maxLength": 500 },
+        "defaultDeliveryTerms": { "type": "string", "maxLength": 500 },
+        "defaultNotes": { "type": "string", "maxLength": 800 },
+        "disclaimerText": { "type": "string", "maxLength": 1000 },
+        "currency": { "type": "string", "enum": ["تومان", "ریال"] },
+        "defaultVatRate": { "type": "number" },
+        "defaultIncludeVat": { "type": "boolean" },
+        "defaultValidDays": { "type": "number" },
+        "updatedByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyName", "currency", "defaultVatRate", "defaultIncludeVat", "defaultValidDays", "updatedByUid", "updatedAt"]
+    },
+    "QuotationCounter": {
+      "title": "QuotationCounter",
+      "description": "Atomic sequence counter for unique proforma invoice numbering.",
+      "type": "object",
+      "properties": {
+        "lastNumber": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["lastNumber", "updatedAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable system audit log entry.",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "entityType": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "entityId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "actorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "actorName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["action", "entityType", "entityId", "summary", "actorUid", "actorName", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Staff user accounts with role and active status."
+    },
+    "/staff_invites/{inviteId}": {
+      "schema": { "$ref": "#/entities/StaffInvite" },
+      "description": "Admin-assigned role invitations matched by verified email."
+    },
+    "/product_categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/ProductCategory" },
+      "description": "Steel product categories."
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Steel product catalog and daily prices."
+    },
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/Customer" },
+      "description": "Registered buyers and projects."
+    },
+    "/quotations/{quotationId}": {
+      "schema": { "$ref": "#/entities/Quotation" },
+      "description": "Proforma invoice headers and computed totals."
+    },
+    "/quotations/{quotationId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/QuotationItem" },
+      "description": "Snapshot line items for a quotation."
+    },
+    "/quotations/{quotationId}/status_history/{historyId}": {
+      "schema": { "$ref": "#/entities/QuotationStatusHistory" },
+      "description": "Status transition log for a quotation."
+    },
+    "/company_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/CompanySettings" },
+      "description": "Company configuration document."
+    },
+    "/counters/{counterId}": {
+      "schema": { "$ref": "#/entities/QuotationCounter" },
+      "description": "Transactional sequence counters."
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Immutable operational audit logs."
+    }
+  }
+}
