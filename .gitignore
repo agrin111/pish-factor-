@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+.devdb/
+backups/
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+next-env.d.ts
+legacy/node_modules/
+legacy/dist/
+tsconfig.tsbuildinfo
+.tmp/

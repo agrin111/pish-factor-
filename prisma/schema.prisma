@@ -1,0 +1,272 @@
+// Aghrin PishFactor — مدل داده سامانه پیش‌فاکتور شرکت آهن آگرین
+// همه مبالغ مالی با Decimal ذخیره می‌شوند (نه Float).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SALES
+}
+
+enum CustomerType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum UnitType {
+  KILOGRAM
+  BRANCH
+  METER
+  SHEET
+  TON
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  APPROVED
+  CANCELLED
+  EXPIRED
+}
+
+enum Currency {
+  TOMAN
+  RIAL
+}
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  fullName     String
+  passwordHash String
+  role         Role      @default(SALES)
+  isActive     Boolean   @default(true)
+  phone        String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions             Session[]
+  customers            Customer[]
+  quotations           Quotation[]
+  statusChanges        QuotationStatusHistory[]
+  auditLogs            AuditLog[]
+
+  @@index([isActive])
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Customer {
+  id                String       @id @default(cuid())
+  name              String
+  mobile            String
+  secondaryPhone    String?
+  companyOrProject  String?
+  customerType      CustomerType @default(INDIVIDUAL)
+  nationalId        String?
+  economicCode      String?
+  city              String?
+  address           String?
+  notes             String?
+  createdById       String
+  createdBy         User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  quotations Quotation[]
+
+  @@index([name])
+  @@index([mobile])
+  @@index([createdById])
+}
+
+model ProductCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  products Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  sku         String   @unique
+  name        String
+  categoryId  String?
+  category    ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  factory     String?
+  specs       String?
+  size        String?
+  thickness   String?
+  length      String?
+  unit        UnitType @default(KILOGRAM)
+  weightPerUnitKg Decimal @default(0) @db.Decimal(12, 3)
+  unitPrice   Decimal  @default(0) @db.Decimal(18, 2)
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  quotationItems QuotationItem[]
+
+  @@index([name])
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model Quotation {
+  id            String          @id @default(cuid())
+  number        String          @unique
+  issueDate     DateTime
+  validUntil    DateTime
+  validDays     Int             @default(0)
+  status        QuotationStatus @default(DRAFT)
+
+  customerId    String
+  customer      Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  // Snapshot اطلاعات مشتری در زمان صدور
+  customerName    String
+  customerMobile  String
+  customerCompany String?
+  customerAddress String?
+
+  currency        Currency @default(TOMAN)
+  includeVat      Boolean  @default(false)
+  vatRate         Decimal  @default(0) @db.Decimal(6, 2)
+
+  itemsSubtotal   Decimal @default(0) @db.Decimal(18, 2)
+  transportCost   Decimal @default(0) @db.Decimal(18, 2)
+  discountAmount  Decimal @default(0) @db.Decimal(18, 2)
+  vatAmount       Decimal @default(0) @db.Decimal(18, 2)
+  grandTotal      Decimal @default(0) @db.Decimal(18, 2)
+  totalWeightKg   Decimal @default(0) @db.Decimal(12, 3)
+  itemCount       Int     @default(0)
+
+  paymentTerms  String?
+  deliveryTerms String?
+  notes         String?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items          QuotationItem[]
+  statusHistory  QuotationStatusHistory[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([issueDate])
+  @@index([customerId])
+  @@index([createdById])
+}
+
+model QuotationItem {
+  id          String  @id @default(cuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  rowIndex    Int
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // Snapshot مشخصات کالا در زمان صدور پیش‌فاکتور
+  sku         String?
+  productName String
+  specs       String?
+  size        String?
+  unit        UnitType @default(KILOGRAM)
+  quantity    Decimal  @db.Decimal(18, 3)
+  unitPrice   Decimal  @db.Decimal(18, 2)
+  lineTotal   Decimal  @db.Decimal(18, 2)
+  weightKg    Decimal  @default(0) @db.Decimal(12, 3)
+
+  @@index([quotationId])
+}
+
+model QuotationStatusHistory {
+  id           String          @id @default(cuid())
+  quotationId  String
+  quotation    Quotation       @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  fromStatus   QuotationStatus?
+  toStatus     QuotationStatus
+  note         String?
+  changedById  String
+  changedBy    User            @relation(fields: [changedById], references: [id], onDelete: Restrict)
+  createdAt    DateTime        @default(now())
+
+  @@index([quotationId])
+}
+
+model CompanySettings {
+  id                   Int      @id @default(1)
+  companyName          String   @default("شرکت آهن آگرین")
+  subtitle             String?
+  logoDataUrl          String?
+  phone                String?
+  secondaryPhone       String?
+  email                String?
+  website              String?
+  address              String?
+  nationalId           String?
+  economicCode         String?
+  registrationNo       String?
+  bankInfo             String?
+  defaultPaymentTerms  String?
+  defaultDeliveryTerms String?
+  defaultNotes         String?
+  disclaimerText       String?
+  currency             Currency @default(TOMAN)
+  defaultVatRate       Decimal  @default(10) @db.Decimal(6, 2)
+  defaultIncludeVat    Boolean  @default(false)
+  defaultValidDays     Int      @default(7)
+  numberPrefix         String   @default("AG")
+  updatedAt            DateTime @updatedAt
+
+  @@map("company_settings")
+}
+
+model NumberSequence {
+  key       String   @id
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorName  String
+  action     String
+  entityType String
+  entityId   String?
+  summary    String
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityType])
+}

@@ -1,9 +1,67 @@
+# راه‌اندازی کامل سامانه روی VPS:
+#   1. cp .env.example .env  و تکمیل مقادیر
+#   2. docker compose up -d --build
+#   3. docker compose logs -f app
+#
+# سرویس migrate یک‌باره اجرا می‌شود و Migration ها و داده‌های اولیه را اعمال می‌کند.
+
 services:
-  pish-factor:
-    build: .
-    container_name: aghrin-pishfactor
+  db:
+    image: postgres:16-alpine
+    container_name: pishfactor-db
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER لازم است}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD لازم است}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB لازم است}
+    volumes:
+      - pishfactor_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # پورت دیتابیس به بیرون باز نمی‌شود؛ دسترسی فقط از شبکه داخلی Docker است.
+
+  migrate:
+    build:
+      context: .
+      target: builder
+    container_name: pishfactor-migrate
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      SEED_ADMIN_USERNAME: ${SEED_ADMIN_USERNAME:-admin}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Aghrin@1404}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-مدیر سیستم}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/seed.ts"
+    restart: 'no'
+
+  app:
+    build:
+      context: .
+      target: runner
+    container_name: pishfactor-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET لازم است}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
+      APP_URL: ${APP_URL:-http://localhost:3000}
     ports:
-      - "3000:3000"
-    env_file:
-      - .env
+      - '${APP_PORT:-3000}:3000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  pishfactor_pgdata:
