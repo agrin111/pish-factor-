@@ -49,6 +49,13 @@ docker compose up -d --build
 ```
 سرویس روی پورت `3000` بالا می‌آید (می‌توانید Nginx با گواهی SSL را به‌عنوان Reverse Proxy مقابل پورت `3000` قرار دهید).
 
+### ۴. دریافت فایل نصب ویندوز (`.exe`) از GitHub
+این مخزن مجهز به **GitHub Actions** (`.github/workflows/build-windows-exe.yml`) است:
+1. پس از Push کردن کد به شاخه `main` در گیت‌هاب، به تب **Actions** یا **Releases** در صفحه مخزن بروید.
+2. پس از پایان ساخت خودکار (~۲ دقیقه)، فایل‌های زیر آماده دانلود هستند:
+   - `Aghrin-PishFactor-Setup-1.0.0.exe` (نصاب کامل ویندوز با ساخت میانبر دسکتاپ)
+   - `Aghrin-PishFactor-Portable-1.0.0.exe` (نسخه پرتابل بدون نیاز به نصب)
+
 ---
 
 ## ساخت اولین مدیر سیستم

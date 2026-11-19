@@ -1,0 +1,30 @@
+appId: com.ahanagrin.pishfactor
+productName: Aghrin PishFactor
+copyright: Copyright © Ahan Agrin Co.
+directories:
+  output: release
+  buildResources: electron
+files:
+  - dist/**/*
+  - electron/main.cjs
+  - electron/icon.png
+  - package.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  icon: electron/icon.png
+  artifactName: Aghrin-PishFactor-${version}-${arch}.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Aghrin PishFactor
+  artifactName: Aghrin-PishFactor-Setup-${version}.${ext}
+portable:
+  artifactName: Aghrin-PishFactor-Portable-${version}.exe
