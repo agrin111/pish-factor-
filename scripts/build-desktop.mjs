@@ -7,7 +7,7 @@
  * نکته مهم: این اسکریپت باید روی ویندوز اجرا شود؛ چون باینری‌های PostgreSQL
  * همراه برنامه و موتور Prisma برای ویندوز در همان محیط نصب می‌شوند.
  */
-import { cpSync, existsSync, readFileSync, readdirSync } from 'node:fs';
+import { cpSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
@@ -58,6 +58,26 @@ if (process.platform === 'win32') {
     );
   }
 
+  // اسکریپت postinstall این بسته، باینری‌ها را در native/bin آماده می‌کند. اگر
+  // npm آن اسکریپت را اجرا نکرده باشد، بسته ساخته می‌شود ولی در اولین اجرا
+  // دیتابیس راه نمی‌افتد؛ پس همین‌جا جلوی ساخت را می‌گیریم.
+  const pgBinary = path.join(
+    root,
+    'node_modules',
+    '@embedded-postgres',
+    'windows-x64',
+    'native',
+    'bin',
+    'postgres.exe',
+  );
+  if (!existsSync(pgBinary)) {
+    fail(
+      'فایل postgres.exe داخل بسته PostgreSQL ویندوز پیدا نشد؛ یعنی اسکریپت نصب آن اجرا نشده است.\n' +
+        '  راه‌حل: «npm ci» را دوباره اجرا کنید. اگر باز هم درست نشد، Node.js 22 LTS را نصب کنید\n' +
+        '  (نسخه‌های جدید npm اسکریپت‌های نصب را به‌صورت پیش‌فرض اجرا نمی‌کنند).',
+    );
+  }
+
   const prismaClientDir = path.join(root, 'node_modules', '.prisma', 'client');
   const prismaEngine = existsSync(prismaClientDir)
     ? readdirSync(prismaClientDir).find((file) => file.includes('windows'))
@@ -92,6 +112,56 @@ const builder = path.join(root, 'node_modules', 'electron-builder', 'out', 'cli'
 if (!existsSync(builder)) {
   fail('electron-builder نصب نیست. «npm install» را اجرا کنید.');
 }
+
+// --- پاک‌سازی خروجی قبلی ----------------------------------------------------
+// اگر نسخه قبلی باز مانده باشد، electron-builder نمی‌تواند exe قفل‌شده را پاک
+// کند و با پیام خام «Access is denied» متوقف می‌شود. اینجا چند بار تلاش
+// می‌کنیم و راهنمای روشن می‌دهیم.
+const releaseDir = path.join(root, 'release');
+const appExecutables = ['Aghrin Pish Factor.exe', 'AghrinPishFactor.exe'];
+const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+function runningInstances() {
+  if (process.platform !== 'win32') return [];
+  const out = spawnSync('tasklist', ['/nh'], { encoding: 'utf8' });
+  const lines = (out.stdout || '').toLowerCase();
+  return appExecutables.filter((name) => lines.includes(name.toLowerCase()));
+}
+
+function cleanupRelease() {
+  if (!existsSync(releaseDir)) return;
+  const waitUntil = Date.now() + 20_000;
+  let warned = false;
+  for (;;) {
+    try {
+      rmSync(releaseDir, { recursive: true, force: true });
+      return;
+    } catch {
+      if (!warned) {
+        warned = true;
+        const running = runningInstances();
+        console.log('\n⚠ خروجی ساخت قبلی در پوشه release قفل شده است.');
+        if (running.length > 0) {
+          console.log(`  یک نسخه از برنامه باز است (${running.join('، ')}).`);
+          console.log('  پنجره برنامه و آیکون آن در System Tray را ببندید؛ ساخت تا ۲۰ ثانیهٔ دیگر خودش ادامه می‌دهد.');
+        } else {
+          console.log('  احتمالاً آنتی‌ویروس فایل را در اختیار دارد؛ ساخت تا ۲۰ ثانیهٔ دیگر خودش ادامه می‌دهد.');
+        }
+      }
+      if (Date.now() > waitUntil) {
+        fail(
+          'پوشه release قابل پاک‌سازی نیست.\n' +
+            '  برنامه را ببندید (یا در cmd: taskkill /f /im "Aghrin Pish Factor.exe")،\n' +
+            '  سپس پوشه release را دستی حذف کنید و ساخت را دوباره اجرا کنید.\n' +
+            '  اگر فایل هنوز قفل است، پوشه پروژه را در استثناهای آنتی‌ویروس قرار دهید.',
+        );
+      }
+    }
+    sleepSync(1000);
+  }
+}
+
+cleanupRelease();
 
 console.log('\n⏳ ساخت فایل‌های نصبی و پرتابل ویندوز... (چند دقیقه طول می‌کشد)\n');
 const result = spawnSync(
