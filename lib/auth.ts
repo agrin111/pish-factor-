@@ -61,12 +61,12 @@ export async function createSession(userId: string): Promise<void> {
     },
   });
 
-  const proto = hdrs.get('x-forwarded-proto') ?? '';
+  const isHttps = (hdrs.get('x-forwarded-proto') ?? '') === 'https';
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production' && proto === 'https',
+    sameSite: isHttps ? 'none' : 'lax',
+    secure: isHttps,
     path: '/',
     expires: expiresAt,
   });

@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { randomUUID, randomBytes, scryptSync } from 'node:crypto';
 import { Prisma, PrismaClient } from '@prisma/client';
 
@@ -201,9 +203,60 @@ function createInitialMockStore(): MockStore {
   };
 }
 
+function serializeMockStore(store: MockStore): string {
+  return JSON.stringify(
+    store,
+    function (_key, val) {
+      const raw = this && typeof this === 'object' ? (this as Record<string, unknown>)[_key] : val;
+      if (raw instanceof Date) {
+        return { __pfType: 'Date', value: raw.toISOString() };
+      }
+      if (raw instanceof Prisma.Decimal || Prisma.Decimal.isDecimal(raw)) {
+        return { __pfType: 'Decimal', value: String(raw) };
+      }
+      return val;
+    },
+    2,
+  );
+}
+
+function deserializeMockStore(rawJson: string): MockStore {
+  return JSON.parse(rawJson, (_key, value) => {
+    if (value && typeof value === 'object' && '__pfType' in value) {
+      if (value.__pfType === 'Date') return new Date(String(value.value));
+      if (value.__pfType === 'Decimal') return new Prisma.Decimal(String(value.value));
+    }
+    return value;
+  }) as MockStore;
+}
+
+function persistMockStore(store: MockStore): void {
+  const file = process.env.PISHFACTOR_DATA_FILE;
+  if (!file) return;
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const tmp = `${file}.tmp`;
+    fs.writeFileSync(tmp, serializeMockStore(store), 'utf8');
+    fs.renameSync(tmp, file);
+  } catch (err) {
+    console.warn('[AI Studio] Failed to persist local store:', err);
+  }
+}
+
 function getMockStore(): MockStore {
   if (!global.__mockPrismaStore) {
-    global.__mockPrismaStore = createInitialMockStore();
+    const file = process.env.PISHFACTOR_DATA_FILE;
+    if (file && fs.existsSync(file)) {
+      try {
+        global.__mockPrismaStore = deserializeMockStore(fs.readFileSync(file, 'utf8'));
+      } catch {
+        global.__mockPrismaStore = createInitialMockStore();
+        persistMockStore(global.__mockPrismaStore);
+      }
+    } else {
+      global.__mockPrismaStore = createInitialMockStore();
+      persistMockStore(global.__mockPrismaStore);
+    }
   }
   return global.__mockPrismaStore;
 }
@@ -442,6 +495,7 @@ function createModelDelegate(table: keyof MockStore, store: MockStore) {
         }
       }
 
+      persistMockStore(store);
       return hydrateRow(table, row, store, { include: args.include });
     },
     update: async (args: { where: Row; data: Row }) => {
@@ -467,6 +521,7 @@ function createModelDelegate(table: keyof MockStore, store: MockStore) {
         }
       }
 
+      persistMockStore(store);
       return { ...row };
     },
     upsert: async (args: { where: Row; create: Row; update: Row }) => {
@@ -476,6 +531,7 @@ function createModelDelegate(table: keyof MockStore, store: MockStore) {
           if (v !== undefined) existing[k] = v;
         }
         existing.updatedAt = new Date();
+        persistMockStore(store);
         return { ...existing };
       }
       const now = new Date();
@@ -486,6 +542,7 @@ function createModelDelegate(table: keyof MockStore, store: MockStore) {
         updatedAt: now,
       };
       store[table].push(row);
+      persistMockStore(store);
       return { ...row };
     },
     delete: async (args: { where: Row }) => {
@@ -496,11 +553,13 @@ function createModelDelegate(table: keyof MockStore, store: MockStore) {
         store.quotationItem = store.quotationItem.filter((i) => i.quotationId !== removed.id);
         store.quotationStatusHistory = store.quotationStatusHistory.filter((h) => h.quotationId !== removed.id);
       }
+      persistMockStore(store);
       return removed;
     },
     deleteMany: async (args?: { where?: Row }) => {
       const before = store[table].length;
       store[table] = store[table].filter((r) => !matchesWhere(r, args?.where));
+      if (before !== store[table].length) persistMockStore(store);
       return { count: before - store[table].length };
     },
     groupBy: async (args: { by: string[]; _count?: { _all?: boolean } }) => {
@@ -555,6 +614,7 @@ function createMockPrisma(): Record<string, unknown> {
       if (seq) {
         seq.value = Number(seq.value ?? 0) + 1;
         seq.updatedAt = new Date();
+        persistMockStore(store);
         return [{ value: seq.value }];
       }
       return [];
@@ -592,7 +652,7 @@ function createResilientPrisma(): PrismaClient {
 
   if (!process.env.DATABASE_URL) {
     global.__prismaUseMock = true;
-    console.warn('[AI Studio] DATABASE_URL not configured — using in-memory mock database');
+    console.warn('[AI Studio] DATABASE_URL not configured — using local store');
   } else {
     try {
       real = new PrismaClient({
@@ -600,14 +660,14 @@ function createResilientPrisma(): PrismaClient {
       });
     } catch {
       global.__prismaUseMock = true;
-      console.warn('[AI Studio] Database not connected — using in-memory mock database');
+      console.warn('[AI Studio] Database not connected — using local store');
     }
   }
 
   const switchToMock = () => {
     if (!global.__prismaUseMock) {
       global.__prismaUseMock = true;
-      console.warn('[AI Studio] Database unreachable — falling back to in-memory mock database');
+      console.warn('[AI Studio] Database unreachable — falling back to local store');
     }
   };
 

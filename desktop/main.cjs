@@ -2,11 +2,10 @@
  * Aghrin PishFactor — پوسته دسکتاپ ویندوز
  *
  * این فرایند سه کار انجام می‌دهد:
- *   ۱) یک PostgreSQL همراه برنامه (embedded) را در پوشه داده کاربر اجرا می‌کند.
+ *   ۱) یک PostgreSQL همراه برنامه (embedded) را در پوشه داده کاربر اجرا می‌کند
+ *      (و در صورت خطای دیتابیس روی سیستم کاربر، با فایل محلی ادامه می‌دهد).
  *   ۲) در اولین اجرا جدول‌ها را می‌سازد و حساب مدیر اولیه را ایجاد می‌کند.
  *   ۳) سرور Next.js را روی 127.0.0.1 اجرا و پنجره برنامه را باز می‌کند.
- *
- * هیچ نصب جداگانه‌ای (Node، PostgreSQL، Docker) لازم نیست.
  */
 const { app, BrowserWindow, dialog, shell, Menu } = require('electron');
 const path = require('node:path');
@@ -60,6 +59,34 @@ function dataDir() {
   return dir;
 }
 
+/**
+ * انتخاب مسیر قابل‌نوشتن و ترجیحاً فقط ASCII برای pgdata
+ * (ابزارهای PostgreSQL در ویندوز با نام کاربری فارسی/غیراسکی در مسیر خطا می‌دهند).
+ */
+function resolvePgDataDir() {
+  const defaultDir = path.join(dataDir(), 'pgdata');
+  if (/^[\x00-\x7F]+$/.test(defaultDir)) {
+    return defaultDir;
+  }
+
+  const candidates = [
+    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'AghrinPishFactor', 'pgdata') : null,
+    process.env.PUBLIC ? path.join(process.env.PUBLIC, 'AghrinPishFactor', 'pgdata') : null,
+    'C:\\AghrinPishFactor\\pgdata',
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (!/^[\x00-\x7F]+$/.test(candidate)) continue;
+    try {
+      fs.mkdirSync(candidate, { recursive: true });
+      return candidate;
+    } catch {
+      /* try next */
+    }
+  }
+  return defaultDir;
+}
+
 function loadConfig() {
   const dir = dataDir();
   const file = path.join(dir, 'config.json');
@@ -104,18 +131,45 @@ function hashPassword(password) {
   return `scrypt$${salt}$${derived.toString('hex')}`;
 }
 
-/** بررسی می‌کند سرور Next پاسخ می‌دهد یا نه. */
-function waitForServer(url, timeoutMs = 90_000) {
+/** بررسی می‌کند سرور Next پاسخ می‌دهد یا نه؛ اگر پروسه زودتر بسته شد سریع خطا می‌دهد. */
+function waitForServer(url, child, getStderr, timeoutMs = 90_000) {
   const startedAt = Date.now();
   return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const finishError = (err) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+
+    child.once('exit', (code, signal) => {
+      const details = getStderr().trim();
+      finishError(
+        new Error(
+          `سرور داخلی متوقف شد (کد ${code ?? signal ?? 'نامشخص'}).${details ? `\n${details}` : ''}`,
+        ),
+      );
+    });
+
     const attempt = () => {
+      if (settled) return;
       const request = http.get(url, (response) => {
         response.resume();
-        resolve(true);
+        if (!settled) {
+          settled = true;
+          resolve(true);
+        }
       });
       request.on('error', () => {
+        if (settled) return;
         if (Date.now() - startedAt > timeoutMs) {
-          reject(new Error(`سرور در ${timeoutMs / 1000} ثانیه آماده نشد.`));
+          const details = getStderr().trim();
+          finishError(
+            new Error(
+              `سرور در ${timeoutMs / 1000} ثانیه آماده نشد.${details ? `\n${details}` : ''}`,
+            ),
+          );
           return;
         }
         setTimeout(attempt, 500);
@@ -182,8 +236,22 @@ async function seedFirstRun(client) {
 
 async function startDatabase(config) {
   const { default: EmbeddedPostgres } = await import('embedded-postgres');
-  const pgData = path.join(dataDir(), 'pgdata');
+  const pgData = resolvePgDataDir();
   const port = await findFreePort();
+
+  // پاک‌سازی پوشه ناقص از اجرای ناموفق قبلی
+  const pgVersionFile = path.join(pgData, 'PG_VERSION');
+  if (fs.existsSync(pgData) && !fs.existsSync(pgVersionFile)) {
+    log('پاک‌سازی پوشه ناقص دیتابیس:', pgData);
+    fs.rmSync(pgData, { recursive: true, force: true });
+  }
+
+  // حذف قفل باقی‌مانده از بسته شدن ناگهانی قبلی
+  const pidFile = path.join(pgData, 'postmaster.pid');
+  if (fs.existsSync(pidFile)) {
+    log('حذف فایل قفل قدیمی postmaster.pid');
+    fs.rmSync(pidFile, { force: true });
+  }
 
   postgres = new EmbeddedPostgres({
     databaseDir: pgData,
@@ -191,22 +259,40 @@ async function startDatabase(config) {
     password: config.pgPassword,
     port,
     persistent: true,
+    onLog: (msg) => log('pg:', String(msg).trim()),
+    onError: (err) => log('pg-err:', err?.message || String(err)),
   });
 
-  if (!fs.existsSync(path.join(pgData, 'PG_VERSION'))) {
+  if (!fs.existsSync(pgVersionFile)) {
     log('راه‌اندازی اولیه دیتابیس در', pgData);
     await postgres.initialise();
   }
   await postgres.start();
   log('PostgreSQL روی پورت', port, 'اجرا شد');
 
+  const { Client } = require('pg');
+
+  // اتصال مستقیم به 127.0.0.1 برای اطمینان از ساخت دیتابیس pishfactor (بدون وابستگی به localhost/IPv6)
+  const adminClient = new Client({
+    host: '127.0.0.1',
+    port,
+    user: 'pishfactor',
+    password: config.pgPassword,
+    database: 'postgres',
+  });
+  await adminClient.connect();
   try {
-    await postgres.createDatabase('pishfactor');
-  } catch {
-    /* دیتابیس از قبل وجود دارد */
+    const dbCheck = await adminClient.query(
+      "SELECT 1 FROM pg_database WHERE datname = 'pishfactor'",
+    );
+    if (dbCheck.rowCount === 0) {
+      await adminClient.query('CREATE DATABASE pishfactor');
+      log('دیتابیس pishfactor ایجاد شد');
+    }
+  } finally {
+    await adminClient.end();
   }
 
-  const { Client } = require('pg');
   const client = new Client({
     host: '127.0.0.1',
     port,
@@ -228,40 +314,66 @@ async function startDatabase(config) {
 
 async function startApp() {
   const config = loadConfig();
-  const pgPort = await startDatabase(config);
-  const appPort = await findFreePort();
+  let databaseUrl = '';
 
-  const databaseUrl = `postgresql://pishfactor:${encodeURIComponent(config.pgPassword)}@127.0.0.1:${pgPort}/pishfactor?schema=public`;
+  try {
+    const pgPort = await startDatabase(config);
+    databaseUrl = `postgresql://pishfactor:${encodeURIComponent(config.pgPassword)}@127.0.0.1:${pgPort}/pishfactor?schema=public`;
+  } catch (dbError) {
+    log('هشدار: PostgreSQL راه‌اندازی نشد، استفاده از ذخیره‌سازی محلی فایل‌محور:', dbError?.stack || String(dbError));
+    try {
+      await postgres?.stop();
+    } catch {
+      /* ignore */
+    }
+    postgres = null;
+  }
+
+  const appPort = await findFreePort();
   const serverEntry = path.join(serverRoot, 'server.js');
   if (!fs.existsSync(serverEntry)) {
     throw new Error(`فایل سرور پیدا نشد: ${serverEntry}`);
   }
 
+  const localDbFile = path.join(dataDir(), 'local-db.json');
+  const env = {
+    ...process.env,
+    ELECTRON_RUN_AS_NODE: '1',
+    NODE_ENV: 'production',
+    NEXT_TELEMETRY_DISABLED: '1',
+    PORT: String(appPort),
+    HOSTNAME: '127.0.0.1',
+    SESSION_SECRET: config.sessionSecret,
+    SESSION_TTL_HOURS: '12',
+    APP_URL: `http://127.0.0.1:${appPort}`,
+    SEED_ADMIN_USERNAME: ADMIN_USERNAME,
+    SEED_ADMIN_PASSWORD: ADMIN_PASSWORD,
+    SEED_ADMIN_NAME: ADMIN_NAME,
+    PISHFACTOR_DATA_FILE: localDbFile,
+  };
+
+  if (databaseUrl) {
+    env.DATABASE_URL = databaseUrl;
+  } else {
+    delete env.DATABASE_URL;
+  }
+
   nextProcess = spawn(process.execPath, [serverEntry], {
     cwd: serverRoot,
-    env: {
-      ...process.env,
-      ELECTRON_RUN_AS_NODE: '1',
-      NODE_ENV: 'production',
-      NEXT_TELEMETRY_DISABLED: '1',
-      PORT: String(appPort),
-      HOSTNAME: '127.0.0.1',
-      DATABASE_URL: databaseUrl,
-      SESSION_SECRET: config.sessionSecret,
-      SESSION_TTL_HOURS: '12',
-      APP_URL: `http://127.0.0.1:${appPort}`,
-      SEED_ADMIN_USERNAME: ADMIN_USERNAME,
-      SEED_ADMIN_PASSWORD: ADMIN_PASSWORD,
-      SEED_ADMIN_NAME: ADMIN_NAME,
-    },
+    env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
+  let recentStderr = '';
   nextProcess.stdout?.on('data', (chunk) => log('next:', chunk.toString().trim()));
-  nextProcess.stderr?.on('data', (chunk) => log('next-err:', chunk.toString().trim()));
+  nextProcess.stderr?.on('data', (chunk) => {
+    const text = chunk.toString().trim();
+    log('next-err:', text);
+    recentStderr = `${recentStderr}\n${text}`.slice(-1200);
+  });
   nextProcess.on('exit', (code) => log('پروسه سرور بسته شد، کد:', code));
 
-  await waitForServer(`http://127.0.0.1:${appPort}/login`);
+  await waitForServer(`http://127.0.0.1:${appPort}/login`, nextProcess, () => recentStderr);
   return `http://127.0.0.1:${appPort}`;
 }
 
