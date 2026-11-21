@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Layers, Package, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import {
+  deleteCategoryAction,
   deleteProductAction,
   saveCategoryAction,
   saveProductAction,
@@ -56,10 +57,16 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ProductRow | null>(null);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<CategoryRow | null>(null);
+  const [categoryFormKey, setCategoryFormKey] = useState(0);
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const [state, formAction] = useActionState(saveProductAction, initialActionState);
   const [categoryState, categoryAction] = useActionState(saveCategoryAction, initialActionState);
+  const [deleteCategoryState, deleteCategoryActionState] = useActionState(
+    deleteCategoryAction,
+    initialActionState,
+  );
   const [toggleState, toggleAction] = useActionState(toggleProductActiveAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteProductAction, initialActionState);
 
@@ -73,10 +80,18 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
 
   useEffect(() => {
     if (categoryState.ok) {
-      setCategoryOpen(false);
+      setEditingCategory(null);
+      setCategoryFormKey((prev) => prev + 1);
       router.refresh();
     }
   }, [categoryState, router]);
+
+  useEffect(() => {
+    if (deleteCategoryState.ok) {
+      setEditingCategory(null);
+      router.refresh();
+    }
+  }, [deleteCategoryState, router]);
 
   useEffect(() => {
     if (toggleState.ok || deleteState.ok) {
@@ -108,9 +123,16 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
         </div>
         {isAdmin && (
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn btn-secondary" onClick={() => setCategoryOpen(true)}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setEditingCategory(null);
+                setCategoryOpen(true);
+              }}
+            >
               <Layers className="h-4 w-4" />
-              دسته‌بندی جدید
+              مدیریت دسته‌بندی‌ها
             </button>
             <button
               type="button"
@@ -296,9 +318,23 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
             </div>
 
             <div>
-              <label className="label" htmlFor="categoryId">
-                دسته‌بندی
-              </label>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <label className="label !mb-0" htmlFor="categoryId">
+                  دسته‌بندی
+                </label>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className="text-[11px] font-semibold text-[#347C65] hover:underline"
+                    onClick={() => {
+                      setEditingCategory(null);
+                      setCategoryOpen(true);
+                    }}
+                  >
+                    + دسته جدید
+                  </button>
+                )}
+              </div>
               <select
                 id="categoryId"
                 name="categoryId"
@@ -452,8 +488,20 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
         </form>
       </Modal>
 
-      <Modal open={categoryOpen} title="دسته‌بندی جدید" onClose={() => setCategoryOpen(false)}>
-        <form action={categoryAction} className="space-y-3">
+      <Modal
+        open={categoryOpen}
+        title={editingCategory ? `ویرایش دسته‌بندی «${editingCategory.name}»` : 'مدیریت دسته‌بندی کالاها'}
+        onClose={() => {
+          setCategoryOpen(false);
+          setEditingCategory(null);
+        }}
+      >
+        <form
+          key={`${editingCategory?.id ?? 'new'}-${categoryFormKey}`}
+          action={categoryAction}
+          className="space-y-3"
+        >
+          {editingCategory && <input type="hidden" name="id" value={editingCategory.id} />}
           {categoryState.message && (
             <div
               className={`rounded-lg border p-2.5 text-xs ${
@@ -465,11 +513,29 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
               {categoryState.message}
             </div>
           )}
+          {deleteCategoryState.message && (
+            <div
+              className={`rounded-lg border p-2.5 text-xs ${
+                deleteCategoryState.ok
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-rose-200 bg-rose-50 text-rose-800'
+              }`}
+            >
+              {deleteCategoryState.message}
+            </div>
+          )}
           <div>
             <label className="label" htmlFor="cat-name">
               نام دسته‌بندی *
             </label>
-            <input id="cat-name" name="name" className="input" required />
+            <input
+              id="cat-name"
+              name="name"
+              className="input"
+              placeholder="مثلاً: مصالح ساختمانی"
+              defaultValue={editingCategory?.name ?? ''}
+              required
+            />
             {categoryState.errors?.name && (
               <p className="field-error">{categoryState.errors.name[0]}</p>
             )}
@@ -483,25 +549,64 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
               name="sortOrder"
               className="input numeric"
               allowDecimal={false}
-              defaultValue={String(categories.length)}
+              defaultValue={
+                editingCategory ? String(editingCategory.sortOrder) : String(categories.length + 1)
+              }
             />
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" className="btn btn-secondary" onClick={() => setCategoryOpen(false)}>
-              انصراف
-            </button>
-            <SubmitButton className="btn btn-primary">ذخیره دسته‌بندی</SubmitButton>
+            {editingCategory ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setEditingCategory(null)}
+              >
+                لغو ویرایش
+              </button>
+            ) : (
+              <button type="button" className="btn btn-secondary" onClick={() => setCategoryOpen(false)}>
+                بستن
+              </button>
+            )}
+            <SubmitButton className="btn btn-primary">
+              {editingCategory ? 'ذخیره تغییرات' : 'افزودن دسته‌بندی'}
+            </SubmitButton>
           </div>
         </form>
 
         {categories.length > 0 && (
           <div className="mt-4 border-t border-[#D7DEE5] pt-3">
-            <h4 className="mb-2 text-xs font-semibold">دسته‌بندی‌های موجود</h4>
-            <ul className="space-y-1.5 text-xs">
+            <h4 className="mb-2 text-xs font-semibold">دسته‌بندی‌های موجود ({formatNumber(categories.length, 0)})</h4>
+            <ul className="max-h-60 divide-y divide-[#EEF1F4] overflow-y-auto text-xs">
               {categories.map((category) => (
-                <li key={category.id} className="flex items-center justify-between">
-                  <span>{category.name}</span>
-                  <span className="muted numeric">{formatNumber(category.productCount, 0)} کالا</span>
+                <li key={category.id} className="flex items-center justify-between gap-2 py-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium">{category.name}</span>
+                    <span className="muted numeric text-[11px]">
+                      ({formatNumber(category.productCount, 0)} کالا)
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm !px-2"
+                      onClick={() => setEditingCategory(category)}
+                      title="ویرایش دسته‌بندی"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    {category.productCount === 0 && (
+                      <form action={deleteCategoryActionState}>
+                        <input type="hidden" name="id" value={category.id} />
+                        <SubmitButton
+                          className="btn btn-ghost btn-sm !px-2 !text-rose-600 hover:!bg-rose-50"
+                          pendingLabel="..."
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </SubmitButton>
+                      </form>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

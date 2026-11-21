@@ -19,11 +19,11 @@ function hashPassword(password: string): string {
 }
 
 const CATEGORIES = [
-  { name: 'ورق فولادی', sortOrder: 1 },
-  { name: 'پروفیل', sortOrder: 2 },
-  { name: 'میلگرد و تیرآهن', sortOrder: 3 },
-  { name: 'لوله و اتصالات', sortOrder: 4 },
-  { name: 'گالوانیزه', sortOrder: 5 },
+  { name: 'مصالح ساختمانی', sortOrder: 1 },
+  { name: 'آهن آلات ساختمانی', sortOrder: 2 },
+  { name: 'ابزار آلات ساختمانی', sortOrder: 3 },
+  { name: 'تاسیسات', sortOrder: 4 },
+  { name: 'آلیاژی', sortOrder: 5 },
 ];
 
 async function main() {
@@ -83,7 +83,7 @@ async function main() {
       {
         sku: 'ST-1250-G',
         name: 'ورق گالوانیزه ۱۲۵۰',
-        categoryId: byName('گالوانیزه'),
+        categoryId: byName('آهن آلات ساختمانی'),
         specs: 'گرید ST12 — روکش روی ۱۲۰ گرم',
         size: '۱۲۵۰ میلی‌متر',
         thickness: '۰.۵ میلی‌متر',
@@ -95,7 +95,7 @@ async function main() {
       {
         sku: 'PR-4040',
         name: 'پروفیل قوطی ۴۰×۴۰',
-        categoryId: byName('پروفیل'),
+        categoryId: byName('آهن آلات ساختمانی'),
         specs: 'ضخامت ۲ میلی‌متر — طول شاخه ۶ متر',
         size: '۴۰×۴۰',
         thickness: '۲ میلی‌متر',
@@ -107,7 +107,7 @@ async function main() {
       {
         sku: 'RB-16',
         name: 'میلگرد آجدار سایز ۱۶',
-        categoryId: byName('میلگرد و تیرآهن'),
+        categoryId: byName('آهن آلات ساختمانی'),
         specs: 'A3 — کارخانه فولاد',
         size: '۱۶',
         thickness: '',
@@ -119,7 +119,7 @@ async function main() {
       {
         sku: 'IP-14',
         name: 'تیرآهن ۱۴',
-        categoryId: byName('میلگرد و تیرآهن'),
+        categoryId: byName('آلیاژی') ?? byName('آهن آلات ساختمانی'),
         specs: 'IPE — طول شاخه ۱۲ متر',
         size: '۱۴',
         thickness: '',

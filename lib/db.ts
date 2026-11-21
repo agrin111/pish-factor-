@@ -87,18 +87,18 @@ function createInitialMockStore(): MockStore {
       },
     ],
     productCategory: [
-      { id: cat1, name: 'ورق فولادی', sortOrder: 1, isActive: true, createdAt: now, updatedAt: now },
-      { id: cat2, name: 'پروفیل', sortOrder: 2, isActive: true, createdAt: now, updatedAt: now },
-      { id: cat3, name: 'میلگرد و تیرآهن', sortOrder: 3, isActive: true, createdAt: now, updatedAt: now },
-      { id: cat4, name: 'لوله و اتصالات', sortOrder: 4, isActive: true, createdAt: now, updatedAt: now },
-      { id: cat5, name: 'گالوانیزه', sortOrder: 5, isActive: true, createdAt: now, updatedAt: now },
+      { id: cat1, name: 'مصالح ساختمانی', sortOrder: 1, isActive: true, createdAt: now, updatedAt: now },
+      { id: cat2, name: 'آهن آلات ساختمانی', sortOrder: 2, isActive: true, createdAt: now, updatedAt: now },
+      { id: cat3, name: 'ابزار آلات ساختمانی', sortOrder: 3, isActive: true, createdAt: now, updatedAt: now },
+      { id: cat4, name: 'تاسیسات', sortOrder: 4, isActive: true, createdAt: now, updatedAt: now },
+      { id: cat5, name: 'آلیاژی', sortOrder: 5, isActive: true, createdAt: now, updatedAt: now },
     ],
     product: [
       {
         id: 'prod-1',
         sku: 'ST-1250-G',
         name: 'ورق گالوانیزه ۱۲۵۰',
-        categoryId: cat5,
+        categoryId: cat2,
         factory: null,
         specs: 'گرید ST12 — روکش روی ۱۲۰ گرم',
         size: '۱۲۵۰ میلی‌متر',
@@ -134,7 +134,7 @@ function createInitialMockStore(): MockStore {
         id: 'prod-3',
         sku: 'RB-16',
         name: 'میلگرد آجدار سایز ۱۶',
-        categoryId: cat3,
+        categoryId: cat2,
         factory: null,
         specs: 'A3 — کارخانه فولاد',
         size: '۱۶',
@@ -152,7 +152,7 @@ function createInitialMockStore(): MockStore {
         id: 'prod-4',
         sku: 'IP-14',
         name: 'تیرآهن ۱۴',
-        categoryId: cat3,
+        categoryId: cat5,
         factory: null,
         specs: 'IPE — طول شاخه ۱۲ متر',
         size: '۱۴',
@@ -250,7 +250,16 @@ function getMockStore(): MockStore {
     if (file && fs.existsSync(file)) {
       try {
         const loaded = deserializeMockStore(fs.readFileSync(file, 'utf8'));
-        global.__mockPrismaStore = { ...defaults, ...loaded };
+        const merged: MockStore = { ...defaults, ...loaded };
+        let addedDefaultCategory = false;
+        for (const cat of defaults.productCategory) {
+          if (!merged.productCategory.some((existing) => existing.name === cat.name)) {
+            merged.productCategory.push({ ...cat, id: randomUUID() });
+            addedDefaultCategory = true;
+          }
+        }
+        global.__mockPrismaStore = merged;
+        if (addedDefaultCategory) persistMockStore(merged);
       } catch {
         global.__mockPrismaStore = defaults;
         persistMockStore(global.__mockPrismaStore);

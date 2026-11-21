@@ -237,6 +237,26 @@ async function applyMigrations(client) {
   }
 }
 
+/** افزودن دسته‌بندی‌های پیش‌فرض کالا بدون تداخل با دسته‌های قبلی */
+async function ensureDefaultCategories(client) {
+  const defaultCategories = [
+    ['cat_building_materials', 'مصالح ساختمانی', 1],
+    ['cat_building_iron', 'آهن آلات ساختمانی', 2],
+    ['cat_building_tools', 'ابزار آلات ساختمانی', 3],
+    ['cat_facilities', 'تاسیسات', 4],
+    ['cat_alloy', 'آلیاژی', 5],
+  ];
+
+  for (const [id, name, sortOrder] of defaultCategories) {
+    await client.query(
+      `INSERT INTO "ProductCategory" (id, name, "sortOrder", "isActive", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, true, now(), now())
+       ON CONFLICT (name) DO NOTHING`,
+      [id, name, sortOrder],
+    );
+  }
+}
+
 /** ایجاد تنظیمات پیش‌فرض شرکت و اولین حساب مدیر. */
 async function seedFirstRun(client) {
   await client.query(
@@ -244,6 +264,8 @@ async function seedFirstRun(client) {
      VALUES (1, 'شرکت آهن آگرین', 'TOMAN', 10, false, 7, 'AG', now())
      ON CONFLICT (id) DO NOTHING`,
   );
+
+  await ensureDefaultCategories(client);
 
   const { rows } = await client.query('SELECT count(*)::int AS count FROM "User"');
   if (rows[0].count > 0) return false;

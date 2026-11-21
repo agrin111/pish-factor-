@@ -205,13 +205,31 @@ export async function saveCategoryAction(
 
   try {
     if (parsed.data.id) {
-      await prisma.productCategory.update({
+      const updated = await prisma.productCategory.update({
         where: { id: parsed.data.id },
         data: { name: parsed.data.name, sortOrder: parsed.data.sortOrder },
       });
+      await logAudit({
+        actorId: user.id,
+        actorName: user.fullName,
+        action: 'CATEGORY_UPDATE',
+        entityType: 'category',
+        entityId: updated.id,
+        summary: `ویرایش دسته‌بندی «${updated.name}»`,
+        ipAddress: await getClientIp(),
+      });
     } else {
-      await prisma.productCategory.create({
+      const created = await prisma.productCategory.create({
         data: { name: parsed.data.name, sortOrder: parsed.data.sortOrder },
+      });
+      await logAudit({
+        actorId: user.id,
+        actorName: user.fullName,
+        action: 'CATEGORY_CREATE',
+        entityType: 'category',
+        entityId: created.id,
+        summary: `ایجاد دسته‌بندی «${created.name}»`,
+        ipAddress: await getClientIp(),
       });
     }
     revalidatePath('/products');
@@ -221,5 +239,42 @@ export async function saveCategoryAction(
     if (code === 'P2002') return fail('این نام دسته‌بندی قبلاً ثبت شده است.');
     console.error('saveCategory failed', error);
     return fail('ذخیره دسته‌بندی با خطا مواجه شد.');
+  }
+}
+
+export async function deleteCategoryAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await assertAdmin().catch(() => null);
+  if (!user) return fail('دسترسی غیرمجاز.');
+
+  const id = String(formData.get('id') ?? '');
+  if (!id) return fail('شناسه دسته‌بندی نامعتبر است.');
+
+  try {
+    const count = await prisma.product.count({ where: { categoryId: id } });
+    if (count > 0) {
+      return fail('این دسته‌بندی دارای کالا است و قابل حذف نیست.');
+    }
+
+    const category = await prisma.productCategory.findUnique({ where: { id } });
+    if (!category) return fail('دسته‌بندی یافت نشد.');
+
+    await prisma.productCategory.delete({ where: { id } });
+    await logAudit({
+      actorId: user.id,
+      actorName: user.fullName,
+      action: 'CATEGORY_DELETE',
+      entityType: 'category',
+      entityId: id,
+      summary: `حذف دسته‌بندی «${category.name}»`,
+      ipAddress: await getClientIp(),
+    });
+    revalidatePath('/products');
+    return success('دسته‌بندی حذف شد.');
+  } catch (error) {
+    console.error('deleteCategory failed', error);
+    return fail('حذف دسته‌بندی با خطا مواجه شد.');
   }
 }
