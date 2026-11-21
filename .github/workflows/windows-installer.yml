@@ -15,6 +15,7 @@ on:
       - 'assets/**'
       - 'public/**'
       - 'scripts/build-desktop.mjs'
+      - 'desktop/build-windows.bat'
       - 'electron-builder.yml'
       - 'package.json'
       - 'package-lock.json'
@@ -42,13 +43,13 @@ jobs:
       - name: ساخت برنامه Next.js
         run: npm run build
 
-      - name: ساخت نصب‌کننده ویندوز
+      - name: ساخت نصب‌کننده و نسخه پرتابل ویندوز
         run: npm run desktop:build
 
-      - name: بارگذاری نصب‌کننده
+      - name: بارگذاری خروجی‌ها
         uses: actions/upload-artifact@v4
         with:
-          name: AghrinPishFactor-Setup
+          name: AghrinPishFactor-Windows
           path: release/*.exe
           if-no-files-found: error
           retention-days: 30

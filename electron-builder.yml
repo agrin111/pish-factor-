@@ -9,6 +9,7 @@ directories:
 # پوسته دسکتاپ + وابستگی‌های تولیدی (prisma/embedded-postgres/pg) به‌صورت خودکار
 files:
   - desktop/**
+  - '!desktop/build-windows.bat'
   - package.json
   - '!**/*.map'
   - '!**/node_modules/*/{CHANGELOG.md,README.md,readme.md,test,tests,__tests__,docs,example,examples}'
@@ -25,11 +26,19 @@ asar: false
 
 win:
   target:
+    # نصب‌کننده معمولی (میان‌بر دسکتاپ و منوی Start)
     - target: nsis
+      arch:
+        - x64
+    # نسخه پرتابل: یک فایل exe که با دوبار کلیک و بدون نصب اجرا می‌شود
+    - target: portable
       arch:
         - x64
   icon: desktop/icon.ico
   artifactName: AghrinPishFactor-Setup-${version}.${ext}
+
+portable:
+  artifactName: AghrinPishFactor-Portable-${version}.${ext}
 
 nsis:
   oneClick: false

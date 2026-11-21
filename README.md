@@ -185,21 +185,31 @@ docker exec pishfactor-db pg_dump -U pishfactor -Fc pishfactor > pishfactor-$(da
 
 ---
 
-## نسخه ویندوزی (نصب با یک کلیک)
+## نسخه ویندوزی — کاملاً آفلاین، با یک کلیک
 
-سامانه برای استفاده روی ویندوز هم بسته‌بندی می‌شود: یک فایل نصب، آیکون روی دسکتاپ و
-پایگاه داده همراه برنامه (PostgreSQL داخلی). کاربر نه Node.js نصب می‌کند، نه PostgreSQL و
-نه Docker؛ فقط روی آیکون کلیک می‌کند.
+سامانه یک برنامه دسکتاپ مستقل است: روی آیکون کلیک می‌کنید و باز می‌شود. کاربر نهایی نه
+Node.js نصب می‌کند، نه PostgreSQL، نه Docker و **نه به اینترنت نیاز دارد**.
 
-- ساخت نصب‌کننده روی ویندوز (یا با گردش‌کار GitHub Actions): `npm run build` سپس `npm run desktop:build`
+- تمام منابع محلی‌اند: فونت Vazirmatn داخل برنامه، آیکون و لوگو محلی، PDF با فونت
+  جاسازی‌شده، دیتابیس PostgreSQL همراه و سرور Next.js روی `127.0.0.1`.
+- در `desktop/main.cjs` تنها `127.0.0.1` مجاز است و هر درخواست بیرونی Chromium
+  (`host-resolver-rules`) مسدود می‌شود؛ `NEXT_TELEMETRY_DISABLED` هم فعال است.
+- دو خروجی ساخته می‌شود: `AghrinPishFactor-Setup-1.0.0.exe` (نصب معمولی) و
+  `AghrinPishFactor-Portable-1.0.0.exe` (بدون نصب، فقط دوبار کلیک).
+
+**ساخت (روی ویندوز):** دوبار کلیک روی `desktop\build-windows.bat` — یا `npm ci`،
+`npm run build` و `npm run desktop:build`. خروجی در پوشه `release/` است.
+
+**ساخت بدون ویندوز:** گردش‌کار `.github/workflows/windows-installer.yml` روی
+`windows-latest` هر دو فایل را می‌سازد و به‌عنوان Artifact منتشر می‌کند.
+
 - پوسته دسکتاپ: `desktop/main.cjs` (راه‌اندازی PostgreSQL همراه، اجرای migration، ساخت
   مدیر اولیه و اجرای سرور Next.js روی `127.0.0.1`)
-- راهنمای کامل نصب، محل داده‌ها، پشتیبان‌گیری و عیب‌یابی: [`docs/WINDOWS-INSTALL.md`](docs/WINDOWS-INSTALL.md)
+- راهنمای کامل نصب، حالت آفلاین، محل داده‌ها، پشتیبان‌گیری و عیب‌یابی:
+  [`docs/WINDOWS-INSTALL.md`](docs/WINDOWS-INSTALL.md)
 
 > ساخت فایل `.exe` باید روی ویندوز انجام شود، چون باینری‌های PostgreSQL و موتور Prisma
-> مخصوص ویندوز باید همراه بسته شوند. گردش‌کار
-> `.github/workflows/windows-installer.yml` این کار را روی `windows-latest` انجام می‌دهد
-> و نصب‌کننده را به‌عنوان Artifact منتشر می‌کند.
+> مخصوص ویندوز باید همراه بسته شوند.
 
 ---
 

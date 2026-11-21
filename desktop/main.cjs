@@ -16,6 +16,16 @@ const net = require('node:net');
 const { spawn } = require('node:child_process');
 const { randomBytes, scryptSync } = require('node:crypto');
 
+// --------------------------------------------------------------------------
+// حالت کاملاً آفلاین
+// تنها آدرس مجاز 127.0.0.1 (سرور داخلی برنامه) است؛ Chromium هیچ درخواستی به
+// اینترنت یا DNS بیرونی نمی‌فرستد. فونت‌ها، آیکون‌ها و PDF همگی محلی‌اند.
+// --------------------------------------------------------------------------
+app.commandLine.appendSwitch(
+  'host-resolver-rules',
+  'MAP * ~NOTFOUND, EXCLUDE 127.0.0.1',
+);
+
 const isDev = !app.isPackaged;
 const projectRoot = path.join(__dirname, '..');
 const serverRoot = isDev
@@ -233,6 +243,7 @@ async function startApp() {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
       NODE_ENV: 'production',
+      NEXT_TELEMETRY_DISABLED: '1',
       PORT: String(appPort),
       HOSTNAME: '127.0.0.1',
       DATABASE_URL: databaseUrl,
