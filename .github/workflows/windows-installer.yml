@@ -53,3 +53,15 @@ jobs:
           path: release/*.exe
           if-no-files-found: error
           retention-days: 30
+
+      # نسخه «بدون نصب» به شکل پوشه آماده اجرا؛ نه نصب می‌خواهد و نه از
+      # خوداستخراج‌کننده NSIS استفاده می‌کند. کاربر پوشه را از zip خارج می‌کند
+      # و «Aghrin Pish Factor.exe» را دوبار کلیک می‌کند.
+      - name: بارگذاری نسخه بدون نصب (پوشه آماده اجرا)
+        uses: actions/upload-artifact@v4
+        with:
+          name: AghrinPishFactor-NoInstall
+          path: release/win-unpacked/**
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
