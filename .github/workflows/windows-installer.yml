@@ -54,20 +54,40 @@ jobs:
       - name: همگام‌سازی نسخه برای Release
         id: version
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          $pkgVersion = (Get-Content package.json | ConvertFrom-Json).version
           $tagVersion = ""
+          $shouldRelease = $false
+
           if ("${{ github.ref_type }}" -eq "tag") {
             $tagVersion = "${{ github.ref_name }}".TrimStart('v')
+            $shouldRelease = $true
           } elseif ("${{ inputs.release_version }}" -ne "") {
             $tagVersion = "${{ inputs.release_version }}".TrimStart('v')
+            $shouldRelease = $true
+          } elseif ("${{ inputs.publish_release }}" -eq "true") {
+            $tagVersion = $pkgVersion
+            $existing = gh release view "v$tagVersion" 2>$null
+            if ($LASTEXITCODE -eq 0) {
+              $parts = $tagVersion.Split('.')
+              if ($parts.Length -eq 3) {
+                $tagVersion = "$($parts[0]).$($parts[1]).$([int]$parts[2] + 1)"
+              }
+            }
+            $shouldRelease = $true
+          } elseif ("${{ github.event_name }}" -eq "push" -and "${{ github.ref_name }}" -eq "main") {
+            $tagVersion = $pkgVersion
+            $existing = gh release view "v$tagVersion" 2>$null
+            if ($LASTEXITCODE -ne 0) {
+              $shouldRelease = $true
+            }
           }
-          if ($tagVersion -ne "") {
+
+          if ($shouldRelease -and $tagVersion -ne "") {
             npm version --no-git-tag-version --allow-same-version $tagVersion
             echo "tag=v$tagVersion" >> $env:GITHUB_OUTPUT
-            echo "should_release=true" >> $env:GITHUB_OUTPUT
-          } elseif ("${{ inputs.publish_release }}" -eq "true") {
-            $pkgVersion = (Get-Content package.json | ConvertFrom-Json).version
-            echo "tag=v$pkgVersion" >> $env:GITHUB_OUTPUT
             echo "should_release=true" >> $env:GITHUB_OUTPUT
           } else {
             echo "should_release=false" >> $env:GITHUB_OUTPUT

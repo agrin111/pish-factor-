@@ -67,7 +67,34 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopState, setDesktopState] = useState<DesktopUpdateState | null>(null);
   const isAdmin = user.role === 'ADMIN';
+
+  useEffect(() => {
+    const bridge = window.pishfactorDesktop;
+    if (!bridge?.isDesktop) return;
+    let active = true;
+    bridge
+      .getUpdateState()
+      .then((state) => {
+        if (active) setDesktopState(state);
+      })
+      .catch(() => {});
+    const unsubscribe = bridge.onUpdateState((state) => {
+      if (active) setDesktopState(state);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const handleCheckUpdates = async () => {
+    const bridge = window.pishfactorDesktop;
+    if (!bridge) return;
+    const next = await bridge.checkForUpdates();
+    setDesktopState(next);
+  };
 
   const title =
     Object.entries(TITLES).find(([path]) => pathname.startsWith(path))?.[1] ?? 'Aghrin PishFactor';
@@ -161,6 +188,80 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
         </nav>
 
         <div className="space-y-3 border-t border-white/10 p-4">
+          {desktopState && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.05] p-3 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="numeric text-[11px] text-slate-300">
+                  نسخه {toPersianDigits(desktopState.currentVersion)}
+                </span>
+                {desktopState.status === 'downloaded' ? (
+                  <button
+                    type="button"
+                    onClick={() => window.pishfactorDesktop?.installUpdate()}
+                    className="inline-flex items-center gap-1 rounded-lg bg-[#5fb79b] px-2.5 py-1 text-[11px] font-semibold text-[#172535] transition hover:bg-[#73c5aa]"
+                  >
+                    <Download className="h-3 w-3" />
+                    <span>نصب و راه‌اندازی مجدد</span>
+                  </button>
+                ) : desktopState.status === 'portable-available' ? (
+                  <button
+                    type="button"
+                    onClick={() => window.pishfactorDesktop?.openReleasesPage()}
+                    className="inline-flex items-center gap-1 rounded-lg bg-[#5fb79b] px-2.5 py-1 text-[11px] font-semibold text-[#172535] transition hover:bg-[#73c5aa]"
+                  >
+                    <Download className="h-3 w-3" />
+                    <span>دریافت از گیت‌هاب</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={
+                      desktopState.status === 'checking' ||
+                      desktopState.status === 'downloading'
+                    }
+                    onClick={handleCheckUpdates}
+                    className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2 py-1 text-[11px] text-slate-200 transition hover:bg-white/15 disabled:opacity-60"
+                  >
+                    <RefreshCw
+                      className={`h-3 w-3 ${
+                        desktopState.status === 'checking' ? 'animate-spin' : ''
+                      }`}
+                    />
+                    <span>
+                      {desktopState.status === 'checking'
+                        ? 'در حال بررسی...'
+                        : 'بررسی به‌روزرسانی'}
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {desktopState.status === 'downloading' && (
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-[#5fb79b] transition-all"
+                    style={{ width: `${desktopState.percent ?? 0}%` }}
+                  />
+                </div>
+              )}
+
+              {desktopState.message && (
+                <p
+                  className={`mt-2 text-[11px] leading-relaxed ${
+                    desktopState.status === 'error'
+                      ? 'text-amber-300'
+                      : desktopState.status === 'downloaded' ||
+                          desktopState.status === 'portable-available'
+                        ? 'text-[#7fcbb2]'
+                        : 'text-slate-300'
+                  }`}
+                >
+                  {desktopState.message}
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="min-w-0">
             <div className="truncate text-sm font-medium">{user.fullName}</div>
             <div className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-slate-300">

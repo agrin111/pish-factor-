@@ -46,8 +46,8 @@ echo.
 echo ============================================================
 echo   ساخت با موفقیت انجام شد.
 echo   پوشه release باز می‌شود:
-echo     AghrinPishFactor-Setup-1.0.0.exe    ^<- نصب معمولی
-echo     AghrinPishFactor-Portable-1.0.0.exe ^<- بدون نصب، فقط دوبار کلیک
+echo     AghrinPishFactor-Setup-*.exe    ^<- نصب معمولی (با آپدیت خودکار)
+echo     AghrinPishFactor-Portable-*.exe ^<- بدون نصب، فقط دوبار کلیک
 echo ============================================================
 start "" explorer "%~dp0..\release"
 pause

@@ -8,22 +8,13 @@
  *   ۳) سرور Next.js را روی 127.0.0.1 اجرا و پنجره برنامه را باز می‌کند.
  *   ۴) در نسخه‌های نصب‌شده، به‌روزرسانی‌های جدید را به‌صورت خودکار از GitHub بررسی و نصب می‌کند.
  */
-const { app, BrowserWindow, dialog, ipcMain, shell, Menu } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, Menu, session } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const http = require('node:http');
 const net = require('node:net');
 const { spawn } = require('node:child_process');
 const { randomBytes, scryptSync } = require('node:crypto');
-
-// --------------------------------------------------------------------------
-// محدودسازی شبکه: پنجره برنامه فقط به 127.0.0.1 متصل می‌شود و دامنه‌های GitHub
-// فقط برای سرویس به‌روزرسانی خودکار در فرایند اصلی مجاز هستند.
-// --------------------------------------------------------------------------
-app.commandLine.appendSwitch(
-  'host-resolver-rules',
-  'MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE github.com, EXCLUDE *.github.com, EXCLUDE *.githubusercontent.com',
-);
 
 const GITHUB_RELEASES_URL = 'https://github.com/agrin111/pish-factor-/releases/latest';
 const isDev = !app.isPackaged;
@@ -425,11 +416,40 @@ async function startApp() {
 function shutdown() {
   if (shutdownPromise) return shutdownPromise;
   shutdownPromise = (async () => {
-    try {
-      nextProcess?.kill();
-      nextProcess = null;
-    } catch {
-      /* ignore */
+    const proc = nextProcess;
+    nextProcess = null;
+    if (proc && proc.exitCode === null) {
+      await new Promise((resolve) => {
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          resolve();
+        };
+        proc.once('exit', finish);
+        try {
+          proc.kill();
+        } catch {
+          finish();
+          return;
+        }
+        setTimeout(() => {
+          if (done) return;
+          try {
+            if (process.platform === 'win32' && proc.pid) {
+              spawn('taskkill', ['/pid', String(proc.pid), '/T', '/F'], {
+                windowsHide: true,
+                stdio: 'ignore',
+              });
+            } else {
+              proc.kill('SIGKILL');
+            }
+          } catch {
+            /* ignore */
+          }
+          setTimeout(finish, 400);
+        }, 2500);
+      });
     }
     try {
       await postgres?.stop();
@@ -448,8 +468,34 @@ async function installDownloadedUpdate() {
   autoUpdater.quitAndInstall(false, true);
 }
 
+function formatUpdaterError(err) {
+  const raw = err?.message || String(err || '');
+  const isMissingReleaseOrPrivate =
+    raw.includes('404') ||
+    raw.includes('ERR_UPDATER_LATEST_VERSION_NOT_FOUND') ||
+    raw.includes('ERR_UPDATER_NO_PUBLISHED_VERSIONS') ||
+    raw.includes('ERR_UPDATER_CHANNEL_FILE_NOT_FOUND') ||
+    raw.includes('No published versions') ||
+    raw.includes('Cannot find latest.yml');
+
+  if (isMissingReleaseOrPrivate) {
+    return 'در گیت‌هاب نسخه قابل دریافت پیدا نشد (مطمئن شوید مخزن عمومی است و Release جدید همراه latest.yml منتشر شده باشد).';
+  }
+  return 'اتصال به گیت‌هاب برقرار نشد. اتصال اینترنت را بررسی کنید.';
+}
+
 function initAutoUpdater() {
   if (isDev) return;
+
+  const updateConfigPath = path.join(process.resourcesPath, 'app-update.yml');
+  log(
+    'راه‌اندازی بررسی به‌روزرسانی — نسخه:',
+    app.getVersion(),
+    '| پرتابل:',
+    isPortable,
+    '| تنظیمات آپدیت:',
+    fs.existsSync(updateConfigPath),
+  );
 
   try {
     ({ autoUpdater } = require('electron-updater'));
@@ -466,6 +512,8 @@ function initAutoUpdater() {
   };
   autoUpdater.autoDownload = !isPortable;
   autoUpdater.autoInstallOnAppQuit = !isPortable;
+  autoUpdater.allowDowngrade = false;
+  autoUpdater.fullChangelog = false;
 
   autoUpdater.on('checking-for-update', () => {
     setUpdateState({ status: 'checking', message: undefined });
@@ -547,7 +595,7 @@ function initAutoUpdater() {
     if (manualCheckRequested) {
       setUpdateState({
         status: 'error',
-        message: 'اتصال به گیت‌هاب برقرار نشد. اتصال اینترنت را بررسی کنید.',
+        message: formatUpdaterError(err),
       });
     } else {
       setUpdateState({ status: 'idle', message: undefined });
@@ -555,13 +603,17 @@ function initAutoUpdater() {
     manualCheckRequested = false;
   });
 
-  setTimeout(() => {
+  const runBackgroundCheck = () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     manualCheckRequested = false;
     autoUpdater.checkForUpdates().catch((err) => {
       log('خطای بررسی خودکار به‌روزرسانی:', err?.message || String(err));
     });
-  }, 6000);
+  };
+
+  setTimeout(runBackgroundCheck, 6000);
+  const timer = setInterval(runBackgroundCheck, 4 * 60 * 60 * 1000);
+  timer.unref?.();
 }
 
 function registerIpc() {
@@ -582,7 +634,7 @@ function registerIpc() {
       log('خطای بررسی دستی به‌روزرسانی:', err?.message || String(err));
       setUpdateState({
         status: 'error',
-        message: 'بررسی به‌روزرسانی ناموفق بود. اتصال اینترنت را بررسی کنید.',
+        message: formatUpdaterError(err),
       });
       manualCheckRequested = false;
     }
@@ -630,22 +682,6 @@ function createMainWindow(url) {
     },
   });
 
-  // پنجره رابط کاربری فقط مجاز به درخواست به سرور محلی 127.0.0.1 است
-  mainWindow.webContents.session.webRequest.onBeforeRequest((details, callback) => {
-    try {
-      const parsed = new URL(details.url);
-      const allowed =
-        parsed.protocol === 'data:' ||
-        parsed.protocol === 'blob:' ||
-        parsed.protocol === 'file:' ||
-        parsed.protocol === 'devtools:' ||
-        parsed.hostname === '127.0.0.1';
-      callback({ cancel: !allowed });
-    } catch {
-      callback({ cancel: false });
-    }
-  });
-
   Menu.setApplicationMenu(null);
   mainWindow.loadURL(url);
 
@@ -677,6 +713,25 @@ app.on('second-instance', () => {
 
 app.whenReady().then(async () => {
   logStream = fs.createWriteStream(path.join(dataDir(), 'desktop.log'), { flags: 'a' });
+
+  // پنجره رابط کاربری فقط مجاز به درخواست به سرور محلی 127.0.0.1 است؛
+  // سرویس به‌روزرسانی خودکار از session جداگانه ('electron-updater') استفاده می‌کند.
+  session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+    try {
+      const parsed = new URL(details.url);
+      const allowed =
+        parsed.protocol === 'data:' ||
+        parsed.protocol === 'blob:' ||
+        parsed.protocol === 'file:' ||
+        parsed.protocol === 'devtools:' ||
+        parsed.hostname === '127.0.0.1' ||
+        parsed.hostname === 'localhost';
+      callback({ cancel: !allowed });
+    } catch {
+      callback({ cancel: false });
+    }
+  });
+
   registerIpc();
   createSplash();
   try {

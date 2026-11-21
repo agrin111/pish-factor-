@@ -175,9 +175,15 @@ const result = spawnSync(
 );
 
 if ((result.status ?? 1) === 0) {
+  const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const ver = pkg.version || '1.0.0';
+  if (!existsSync(path.join(releaseDir, 'latest.yml'))) {
+    console.warn('⚠ فایل latest.yml در پوشه release ساخته نشد؛ برای آپدیت خودکار لازم است.');
+  }
   console.log('\n✔ ساخت انجام شد. فایل‌ها در پوشه release:');
-  console.log('   • AghrinPishFactor-Setup-1.0.0.exe    ← نصب معمولی');
-  console.log('   • AghrinPishFactor-Portable-1.0.0.exe ← اجرای بدون نصب\n');
+  console.log(`   • AghrinPishFactor-Setup-${ver}.exe    ← نصب معمولی (با آپدیت خودکار)`);
+  console.log(`   • AghrinPishFactor-Portable-${ver}.exe ← اجرای بدون نصب`);
+  console.log('   • latest.yml + .blockmap              ← فایل‌های متادیتای آپدیت خودکار\n');
 }
 
 process.exit(result.status ?? 1);
