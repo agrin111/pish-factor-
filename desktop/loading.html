@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Aghrin PishFactor</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #172535;
+        color: #fff;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        user-select: none;
+      }
+      .wrap {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+      }
+      .logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: #347c65;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        font-weight: 800;
+      }
+      h1 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+      p {
+        margin: 0;
+        font-size: 12px;
+        color: #b9c5d2;
+      }
+      .bar {
+        width: 190px;
+        height: 4px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.15);
+        overflow: hidden;
+        position: relative;
+      }
+      .bar::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        width: 40%;
+        border-radius: 99px;
+        background: #347c65;
+        animation: slide 1.25s ease-in-out infinite;
+      }
+      @keyframes slide {
+        0% {
+          transform: translateX(140%);
+        }
+        100% {
+          transform: translateX(-140%);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="logo">آا</div>
+      <h1>Aghrin PishFactor</h1>
+      <p>در حال آماده‌سازی پایگاه داده و سرور داخلی…</p>
+      <div class="bar"></div>
+    </div>
+  </body>
+</html>

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import {
   BarChart3,
   Building2,
+  FilePenLine,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -39,6 +40,7 @@ interface AppShellProps {
 const NAV = [
   { href: '/dashboard', label: 'داشبورد', icon: LayoutDashboard },
   { href: '/invoices', label: 'آرشیو پیش‌فاکتورها', icon: FileText, count: 'invoices' as const },
+  { href: '/letterhead', label: 'سربرگ متفرقه', icon: FilePenLine },
   { href: '/customers', label: 'مدیریت مشتریان', icon: Users, count: 'customers' as const },
   { href: '/products', label: 'مدیریت کالا و قیمت', icon: Package, count: 'products' as const },
   { href: '/reports', label: 'گزارش‌های فروش', icon: BarChart3 },
@@ -49,6 +51,7 @@ const NAV = [
 const TITLES: Record<string, string> = {
   '/dashboard': 'داشبورد',
   '/invoices': 'آرشیو پیش‌فاکتورها',
+  '/letterhead': 'سربرگ متفرقه',
   '/customers': 'مدیریت مشتریان',
   '/products': 'مدیریت کالا و قیمت',
   '/reports': 'گزارش‌های فروش',
@@ -83,7 +86,7 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
       )}
 
       <aside
-        className={`sidebar-panel fixed inset-y-0 right-0 z-50 flex w-[266px] shrink-0 flex-col bg-[#172535] text-white lg:static ${
+        className={`sidebar-panel fixed inset-y-0 right-0 z-50 flex w-[268px] shrink-0 flex-col border-l border-white/5 bg-[linear-gradient(180deg,#172535_0%,#1a2c3e_62%,#1b3341_100%)] text-white shadow-[0_20px_50px_-30px_rgba(23,37,53,0.9)] lg:static ${
           mobileOpen ? 'open' : ''
         }`}
       >
@@ -127,14 +130,20 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center justify-between gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                className={`relative flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors ${
                   active
-                    ? 'bg-white/15 text-white'
-                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    ? 'bg-white/[0.14] text-white ring-1 ring-white/10'
+                    : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
                 }`}
               >
+                {active && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-y-2 right-0 w-[3px] rounded-full bg-[#5fb79b]"
+                  />
+                )}
                 <span className="flex items-center gap-2.5 whitespace-nowrap">
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#7fcbb2]' : ''}`} />
                   <span>{item.label}</span>
                 </span>
                 {count !== undefined && (
@@ -166,7 +175,7 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-[#D7DEE5] bg-white px-4 sm:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-[#D7DEE5]/80 bg-white/85 px-4 backdrop-blur-md sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
@@ -182,12 +191,12 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
               <span className="truncate font-bold">{title}</span>
             </div>
           </div>
-          <div className="numeric shrink-0 whitespace-nowrap text-xs text-slate-500">
+          <div className="numeric shrink-0 whitespace-nowrap rounded-full border border-[#D7DEE5]/70 bg-[#F7F9FA] px-3 py-1 text-[11px] text-slate-500">
             {formatJalaliLong(new Date())}
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1360px] flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1360px] flex-1 p-4 sm:p-6 lg:px-8 lg:py-7">{children}</main>
       </div>
     </div>
   );

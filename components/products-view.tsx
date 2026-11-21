@@ -13,6 +13,7 @@ import { initialActionState } from '@/lib/forms';
 import { Modal } from '@/components/modal';
 import { SubmitButton } from '@/components/submit-button';
 import { formatCurrency, formatNumber } from '@/lib/format';
+import { NumberField } from '@/components/number-field';
 import { UNIT_LABEL, UNITS } from '@/lib/labels';
 
 export interface ProductRow {
@@ -373,12 +374,10 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
               <label className="label" htmlFor="weightPerUnitKg">
                 وزن هر واحد (کیلوگرم)
               </label>
-              <input
+              <NumberField
                 id="weightPerUnitKg"
                 name="weightPerUnitKg"
                 className="input numeric"
-                dir="ltr"
-                inputMode="decimal"
                 defaultValue={editing?.weightPerUnitKg ?? '0'}
               />
             </div>
@@ -387,12 +386,10 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
               <label className="label" htmlFor="unitPrice">
                 قیمت واحد ({currency})
               </label>
-              <input
+              <NumberField
                 id="unitPrice"
                 name="unitPrice"
                 className="input numeric"
-                dir="ltr"
-                inputMode="decimal"
                 defaultValue={editing?.unitPrice ?? '0'}
               />
               {state.errors?.unitPrice && (
@@ -481,13 +478,12 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
             <label className="label" htmlFor="cat-sort">
               ترتیب نمایش
             </label>
-            <input
+            <NumberField
               id="cat-sort"
               name="sortOrder"
               className="input numeric"
-              type="number"
-              min={0}
-              defaultValue={categories.length}
+              allowDecimal={false}
+              defaultValue={String(categories.length)}
             />
           </div>
           <div className="flex justify-end gap-2">

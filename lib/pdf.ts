@@ -6,6 +6,7 @@ import { ArabicShaper } from 'arabic-persian-reshaper';
 import type { CompanySettings, Quotation, QuotationItem } from '@prisma/client';
 import { STATUS_LABEL, UNIT_LABEL } from '@/lib/labels';
 import { amountInWords, formatNumber } from '@/lib/money';
+import { toPersianDigits } from '@/lib/format';
 import { formatJalali, addDays } from '@/lib/jalali';
 
 const bidi = bidiFactory();
@@ -90,7 +91,7 @@ export async function renderQuotationPdf(
     size: 'A4',
     margins: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN },
     info: {
-      Title: `پیش‌فاکتور ${quotation.number}`,
+      Title: `پیش‌فاکتور ${toPersianDigits(quotation.number)}`,
       Author: company.companyName,
       Subject: 'پیش‌فاکتور فروش کالا',
     },
@@ -202,7 +203,10 @@ export async function renderQuotationPdf(
   doc.font('faBold').fontSize(10).fillColor(NAVY);
   text('پیش‌فاکتور فروش کالا', metaX, headerTop + 16, { width: metaW - 12, align: 'center' });
   doc.font('fa').fontSize(8).fillColor(MUTED);
-  text(`شماره: ${quotation.number}`, metaX, headerTop + 34, { width: metaW - 12, align: 'right' });
+  text(`شماره: ${toPersianDigits(quotation.number)}`, metaX, headerTop + 34, {
+    width: metaW - 12,
+    align: 'right',
+  });
   text(`تاریخ صدور: ${formatJalali(quotation.issueDate)}`, metaX, headerTop + 47, {
     width: metaW - 12,
     align: 'right',

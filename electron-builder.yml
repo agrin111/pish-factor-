@@ -1,0 +1,43 @@
+appId: ir.agrin.pishfactor
+productName: Aghrin PishFactor
+copyright: شرکت آهن آگرین
+
+directories:
+  output: release
+  buildResources: desktop
+
+# پوسته دسکتاپ + وابستگی‌های تولیدی (prisma/embedded-postgres/pg) به‌صورت خودکار
+files:
+  - desktop/**
+  - package.json
+  - '!**/*.map'
+  - '!**/node_modules/*/{CHANGELOG.md,README.md,readme.md,test,tests,__tests__,docs,example,examples}'
+
+# برنامه Next.js (پس از اجرای scripts/build-desktop.mjs آماده است)
+extraResources:
+  - from: .next/standalone
+    to: app/.next/standalone
+  - from: prisma/migrations
+    to: app/prisma/migrations
+
+# asar خاموش است تا فایل‌های اجرایی PostgreSQL همراه برنامه قابل اجرا بمانند
+asar: false
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: desktop/icon.ico
+  artifactName: AghrinPishFactor-Setup-${version}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Aghrin PishFactor
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false

@@ -7,6 +7,7 @@ import { saveCompanySettingsAction } from '@/actions/settings';
 import { initialActionState } from '@/lib/forms';
 import { SubmitButton } from '@/components/submit-button';
 import { BrandLogo } from '@/components/brand-logo';
+import { NumberField } from '@/components/number-field';
 
 export interface SettingsInitial {
   companyName: string;
@@ -289,11 +290,10 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
             <label className="label" htmlFor="defaultVatRate">
               درصد مالیات پیش‌فرض
             </label>
-            <input
+            <NumberField
               id="defaultVatRate"
               name="defaultVatRate"
               className="input numeric"
-              dir="ltr"
               defaultValue={initial.defaultVatRate}
             />
           </div>
@@ -301,15 +301,12 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
             <label className="label" htmlFor="defaultValidDays">
               مدت اعتبار پیش‌فرض (روز)
             </label>
-            <input
+            <NumberField
               id="defaultValidDays"
               name="defaultValidDays"
-              type="number"
-              min={0}
-              max={365}
+              allowDecimal={false}
               className="input numeric"
-              dir="ltr"
-              defaultValue={initial.defaultValidDays}
+              defaultValue={String(initial.defaultValidDays)}
             />
           </div>
           <div className="flex items-end">

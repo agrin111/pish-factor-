@@ -12,7 +12,7 @@ import {
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { formatJalali, jalaliToDate, toJalali, todayUtc } from '@/lib/jalali';
-import { formatCurrency, formatNumber, toNumber } from '@/lib/format';
+import { formatCurrency, formatDocumentNumber, formatNumber, toNumber } from '@/lib/format';
 import { STATUS_BADGE, STATUS_LABEL } from '@/lib/labels';
 import { effectiveStatus } from '@/lib/quotation-status';
 import { getCompanySettings } from '@/lib/settings';
@@ -167,7 +167,7 @@ export default async function DashboardPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold">داشبورد فروش</h1>
+          <h1 className="text-xl font-extrabold">داشبورد فروش</h1>
           <p className="muted mt-1 text-xs">
             {user.fullName} — {user.role === 'ADMIN' ? 'مدیر سیستم' : 'کارمند فروش'} · امروز{' '}
             <span className="numeric">{formatJalali(today)}</span>
@@ -188,7 +188,10 @@ export default async function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="card card-pad flex items-start justify-between gap-3">
+            <div
+              key={stat.label}
+              className="card card-pad card-hover flex items-start justify-between gap-3"
+            >
               <div>
                 <div className="muted text-xs">{stat.label}</div>
                 <div className={`numeric mt-1 text-2xl font-extrabold ${stat.tone}`}>
@@ -196,7 +199,7 @@ export default async function DashboardPage() {
                 </div>
                 <div className="muted mt-1 text-[11px]">{stat.hint}</div>
               </div>
-              <span className="rounded-lg bg-[#F1F3F5] p-2">
+              <span className="rounded-xl bg-[linear-gradient(180deg,#F4F7F8,#EAEFF2)] p-2.5 ring-1 ring-[#D7DEE5]/70">
                 <Icon className={`h-5 w-5 ${stat.tone}`} />
               </span>
             </div>
@@ -220,7 +223,7 @@ export default async function DashboardPage() {
                   </span>
                   <div className="flex w-full flex-1 items-end">
                     <div
-                      className="w-full rounded-t-md bg-[#347C65]"
+                      className="w-full rounded-t-lg bg-[linear-gradient(180deg,#48A184,#2F7160)] transition-opacity hover:opacity-85"
                       style={{ height: `${height}%` }}
                       title={`${month.label}: ${formatCurrency(month.sum, currency)}`}
                     />
@@ -281,7 +284,7 @@ export default async function DashboardPage() {
                         href={`/invoices/${row.id}`}
                         className="numeric block truncate text-sm font-semibold hover:text-[#347C65]"
                       >
-                        {row.number}
+                        {formatDocumentNumber(row.number)}
                       </Link>
                       <div className="muted mt-0.5 truncate text-[11px]">
                         {row.customerName} · {formatJalali(row.issueDate)}

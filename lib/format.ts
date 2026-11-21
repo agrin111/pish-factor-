@@ -1,6 +1,31 @@
 /** قالب‌بندی اعداد و مبالغ — بدون وابستگی به سمت سرور، قابل استفاده در کلاینت و سرور. */
 
 const FA_NUMBER = new Intl.NumberFormat('fa-IR');
+const FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+
+/** ارقام لاتین را به فارسی تبدیل می‌کند (فقط رقم‌ها؛ حروف و علائم دست‌نخورده می‌مانند). */
+export function toPersianDigits(value: string | number): string {
+  return String(value).replace(/[0-9]/g, (digit) => FA_DIGITS[Number(digit)]);
+}
+
+/** ارقام فارسی و عربی را به لاتین تبدیل می‌کند تا محاسبه و اعتبارسنجی ممکن شود. */
+export function toEnglishDigits(value: string): string {
+  return value
+    .replace(/[۰-۹]/g, (digit) => String(FA_DIGITS.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
+}
+
+/** ورودی کاربر را به رشته عددی لاتین تبدیل می‌کند: ارقام فارسی، ممیز عربی و جداکننده هزارگان. */
+export function normalizeNumberString(value: string): string {
+  return toEnglishDigits(value)
+    .replace(/٫/g, '.')
+    .replace(/[٬,\s]/g, '');
+}
+
+/** شماره سند را برای نمایش فارسی می‌کند؛ پیشوند لاتین (مثل AG) حفظ می‌شود. */
+export function formatDocumentNumber(value: string): string {
+  return toPersianDigits(value);
+}
 
 export const CURRENCY_LABEL: Record<string, string> = {
   TOMAN: 'تومان',
@@ -9,7 +34,8 @@ export const CURRENCY_LABEL: Record<string, string> = {
 
 export function toNumber(value: unknown): number {
   if (value === null || value === undefined || value === '') return 0;
-  const numeric = typeof value === 'number' ? value : Number(String(value));
+  const numeric =
+    typeof value === 'number' ? value : Number(normalizeNumberString(String(value)));
   return Number.isFinite(numeric) ? numeric : 0;
 }
 

@@ -8,6 +8,7 @@ import { InvoiceDocument } from '@/components/invoice-document';
 import { InvoiceActions } from '@/components/invoice-actions';
 import { PrintButton } from '@/components/print-button';
 import { formatJalali } from '@/lib/jalali';
+import { formatDocumentNumber } from '@/lib/format';
 import { effectiveStatus } from '@/lib/quotation-status';
 import { STATUS_BADGE, STATUS_LABEL } from '@/lib/labels';
 
@@ -46,7 +47,9 @@ export default async function InvoiceDetailPage({
       <div className="no-print flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="numeric text-lg font-bold">{quotation.number}</h1>
+            <h1 className="numeric text-lg font-bold">
+              {formatDocumentNumber(quotation.number)}
+            </h1>
             <span className={STATUS_BADGE[shownStatus]}>{STATUS_LABEL[shownStatus]}</span>
           </div>
           <p className="muted mt-1 text-xs">

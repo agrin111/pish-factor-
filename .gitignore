@@ -15,3 +15,6 @@ legacy/node_modules/
 legacy/dist/
 tsconfig.tsbuildinfo
 .tmp/
+
+# خروجی ساخت نصب‌کننده ویندوز
+release/

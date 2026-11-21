@@ -2,6 +2,7 @@
   "name": "pish-factor",
   "version": "1.0.0",
   "private": true,
+  "main": "desktop/main.cjs",
   "description": "Aghrin PishFactor — سامانه صدور پیش‌فاکتور شرکت آهن آگرین",
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3000",
@@ -14,6 +15,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "admin:create": "tsx scripts/create-admin.ts",
+    "desktop:start": "electron .",
+    "desktop:build": "node scripts/build-desktop.mjs",
     "postinstall": "prisma generate"
   },
   "prisma": {
@@ -23,9 +26,11 @@
     "@prisma/client": "^6.16.0",
     "arabic-persian-reshaper": "^1.0.1",
     "bidi-js": "^1.0.3",
+    "embedded-postgres": "^18.6.0-beta.19",
     "lucide-react": "^0.511.0",
     "next": "^15.5.29",
     "pdfkit": "^0.17.2",
+    "pg": "^8.13.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zod": "^3.25.76"
@@ -36,7 +41,8 @@
     "@types/pdfkit": "^0.17.3",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
-    "embedded-postgres": "^18.6.0-beta.19",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
     "prisma": "^6.16.0",
     "tailwindcss": "^4.3.5",
     "tsx": "^4.20.0",

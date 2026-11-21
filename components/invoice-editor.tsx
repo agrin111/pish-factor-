@@ -8,7 +8,15 @@ import type { QuotationStatus, UnitType } from '@prisma/client';
 import { saveQuotationAction } from '@/actions/quotations';
 import { initialActionState } from '@/lib/forms';
 import { SubmitButton } from '@/components/submit-button';
-import { amountInWords, formatCurrency, formatNumber, toNumber } from '@/lib/format';
+import {
+  amountInWords,
+  formatCurrency,
+  formatNumber,
+  toEnglishDigits,
+  toNumber,
+  toPersianDigits,
+} from '@/lib/format';
+import { NumberField } from '@/components/number-field';
 import { STATUS_LABEL, UNITS, UNIT_LABEL } from '@/lib/labels';
 import { addDays, formatJalali, parseJalaliInput } from '@/lib/jalali';
 
@@ -360,8 +368,8 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
             id="issueDate"
             className="input numeric"
             dir="ltr"
-            value={issueDate}
-            onChange={(event) => setIssueDate(event.target.value)}
+            value={toPersianDigits(issueDate)}
+            onChange={(event) => setIssueDate(toEnglishDigits(event.target.value))}
             placeholder="۱۴۰۵/۰۸/۲۸"
             required
           />
@@ -371,15 +379,13 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
           <label className="label" htmlFor="validDays">
             مدت اعتبار (روز)
           </label>
-          <input
+          <NumberField
             id="validDays"
             className="input numeric"
-            dir="ltr"
-            type="number"
-            min={0}
-            max={365}
+            allowDecimal={false}
+            inputMode="numeric"
             value={validDays}
-            onChange={(event) => setValidDays(event.target.value)}
+            onValueChange={setValidDays}
           />
           <p className="field-hint">اعتبار تا: {validUntilLabel}</p>
         </div>
@@ -422,12 +428,11 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
             درصد مالیات
           </label>
           <div className="flex items-center gap-2">
-            <input
+            <NumberField
               id="vatRate"
               className="input numeric"
-              dir="ltr"
               value={vatRate}
-              onChange={(event) => setVatRate(event.target.value)}
+              onValueChange={setVatRate}
             />
             <label className="flex items-center gap-1 whitespace-nowrap text-xs">
               <input
@@ -528,21 +533,17 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                     </select>
                   </td>
                   <td>
-                    <input
+                    <NumberField
                       className="input numeric !py-1.5 text-xs"
-                      dir="ltr"
-                      inputMode="decimal"
                       value={row.quantity}
-                      onChange={(event) => updateRow(row.key, { quantity: event.target.value })}
+                      onValueChange={(next) => updateRow(row.key, { quantity: next })}
                     />
                   </td>
                   <td>
-                    <input
+                    <NumberField
                       className="input numeric !py-1.5 text-xs"
-                      dir="ltr"
-                      inputMode="decimal"
                       value={row.unitPrice}
-                      onChange={(event) => updateRow(row.key, { unitPrice: event.target.value })}
+                      onValueChange={(next) => updateRow(row.key, { unitPrice: next })}
                     />
                   </td>
                   <td className="numeric font-semibold">
@@ -620,12 +621,11 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
             <label htmlFor="transportCost" className="muted">
               هزینه حمل
             </label>
-            <input
+            <NumberField
               id="transportCost"
               className="input numeric max-w-[130px] !py-1.5 text-left"
-              dir="ltr"
               value={transportCost}
-              onChange={(event) => setTransportCost(event.target.value)}
+              onValueChange={setTransportCost}
             />
           </div>
 
@@ -633,12 +633,11 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
             <label htmlFor="discountAmount" className="muted">
               تخفیف
             </label>
-            <input
+            <NumberField
               id="discountAmount"
               className="input numeric max-w-[130px] !py-1.5 text-left"
-              dir="ltr"
               value={discountAmount}
-              onChange={(event) => setDiscountAmount(event.target.value)}
+              onValueChange={setDiscountAmount}
             />
           </div>
 

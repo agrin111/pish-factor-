@@ -3,7 +3,7 @@ import { FileText, Plus } from 'lucide-react';
 import type { Prisma, QuotationStatus } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDocumentNumber } from '@/lib/format';
 import { formatJalali, parseJalaliInput } from '@/lib/jalali';
 import { STATUS_BADGE, STATUS_LABEL, STATUSES } from '@/lib/labels';
 import { effectiveStatus, statusWhere } from '@/lib/quotation-status';
@@ -227,7 +227,7 @@ export default async function InvoicesPage({
                         href={`/invoices/${row.id}`}
                         className="numeric font-semibold hover:text-[#347C65]"
                       >
-                        {row.number}
+                        {formatDocumentNumber(row.number)}
                       </Link>
                     </td>
                     <td>

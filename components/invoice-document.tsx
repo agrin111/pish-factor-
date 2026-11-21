@@ -1,4 +1,9 @@
-import { amountInWords, formatCurrency, formatNumber } from '@/lib/format';
+import {
+  amountInWords,
+  formatCurrency,
+  formatDocumentNumber,
+  formatNumber,
+} from '@/lib/format';
 import { formatJalali } from '@/lib/jalali';
 import { STATUS_LABEL, UNIT_LABEL } from '@/lib/labels';
 import type { CompanySettings, QuotationStatus, UnitType } from '@prisma/client';
@@ -90,7 +95,10 @@ export function InvoiceDocument({ quotation, company }: Props) {
           <div className="space-y-0.5 border-[#D7DEE5] text-left sm:border-r sm:pr-5">
             <div className="text-sm font-bold">پیش‌فاکتور فروش کالا</div>
             <div>
-              شماره: <span className="numeric font-bold">{quotation.number}</span>
+              شماره:{' '}
+              <span className="numeric font-bold">
+                {formatDocumentNumber(quotation.number)}
+              </span>
             </div>
             <div className="numeric">تاریخ صدور: {formatJalali(quotation.issueDate)}</div>
             <div className="numeric">

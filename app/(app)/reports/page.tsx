@@ -3,7 +3,7 @@ import { Download } from 'lucide-react';
 import { requireUser } from '@/lib/auth';
 import { getCompanySettings } from '@/lib/settings';
 import { loadReport } from '@/lib/reports';
-import { formatCurrency, formatNumber } from '@/lib/format';
+import { formatCurrency, formatDocumentNumber, formatNumber } from '@/lib/format';
 import { formatJalali, jalaliToDate, parseJalaliInput, toJalali, todayUtc } from '@/lib/jalali';
 import { STATUS_BADGE, STATUS_LABEL } from '@/lib/labels';
 
@@ -208,7 +208,7 @@ export default async function ReportsPage({
                   <tr key={row.id}>
                     <td>
                       <Link href={`/invoices/${row.id}`} className="numeric font-semibold hover:text-[#347C65]">
-                        {row.number}
+                        {formatDocumentNumber(row.number)}
                       </Link>
                     </td>
                     <td>{row.customerName}</td>

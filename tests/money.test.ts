@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { Prisma } from '@prisma/client';
 import { computeTotals, dec, roundMoney } from '@/lib/money';
-import { numberToPersianWords, formatNumber } from '@/lib/format';
+import {
+  formatDocumentNumber,
+  formatNumber,
+  normalizeNumberString,
+  numberToPersianWords,
+  toNumber,
+} from '@/lib/format';
 
 const num = (value: Prisma.Decimal) => Number(value.toString());
 
@@ -97,5 +103,19 @@ describe('مبلغ به حروف فارسی', () => {
   it('قالب‌بندی عدد فارسی', () => {
     expect(formatNumber(1250000, 0)).toContain('۱');
     expect(formatNumber(1250000, 0).replace(/[۰-۹]/g, '')).toMatch(/[٬,]/);
+  });
+});
+
+describe('ورودی ارقام فارسی', () => {
+  it('ارقام فارسی، ممیز عربی و جداکننده هزارگان را به عدد تبدیل می‌کند', () => {
+    expect(normalizeNumberString('۱۲۵۰۰۰۰')).toBe('1250000');
+    expect(normalizeNumberString('۱٬۲۵۰٬۰۰۰')).toBe('1250000');
+    expect(normalizeNumberString('۲٫۵')).toBe('2.5');
+    expect(toNumber('۱۲۵۰۰۰۰')).toBe(1_250_000);
+    expect(toNumber('۳/۴')).toBe(0);
+  });
+
+  it('شماره سند را با ارقام فارسی و پیشوند لاتین نمایش می‌دهد', () => {
+    expect(formatDocumentNumber('AG-1405-0001')).toBe('AG-۱۴۰۵-۰۰۰۱');
   });
 });
