@@ -6,7 +6,14 @@ directories:
   output: release
   buildResources: desktop
 
-# پوسته دسکتاپ + وابستگی‌های تولیدی (prisma/embedded-postgres/pg) به‌صورت خودکار
+# انتشار به‌روزرسانی‌های ویندوز از طریق GitHub Releases
+publish:
+  provider: github
+  owner: agrin111
+  repo: pish-factor-
+  releaseType: release
+
+# پوسته دسکتاپ + وابستگی‌های تولیدی (prisma/embedded-postgres/pg/electron-updater) به‌صورت خودکار
 files:
   - desktop/**
   - '!desktop/build-windows.bat'
@@ -26,7 +33,7 @@ asar: false
 
 win:
   target:
-    # نصب‌کننده معمولی (میان‌بر دسکتاپ و منوی Start)
+    # نصب‌کننده معمولی (میان‌بر دسکتاپ، منوی Start و پشتیبانی از آپدیت خودکار)
     - target: nsis
       arch:
         - x64

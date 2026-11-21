@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BarChart3,
   Building2,
+  Download,
   FilePenLine,
   FileText,
   LayoutDashboard,
@@ -13,6 +14,7 @@ import {
   Menu,
   Package,
   Plus,
+  RefreshCw,
   Shield,
   Users,
   X,
@@ -21,6 +23,8 @@ import { BrandLogo } from '@/components/brand-logo';
 import { logoutAction } from '@/actions/auth';
 import type { Role } from '@prisma/client';
 import { formatJalaliLong } from '@/lib/jalali';
+import { toPersianDigits } from '@/lib/format';
+import type { DesktopUpdateState } from '@/types/desktop';
 
 export interface ShellUser {
   id: string;

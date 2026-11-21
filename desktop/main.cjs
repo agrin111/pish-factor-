@@ -1,13 +1,14 @@
 /**
  * Aghrin PishFactor — پوسته دسکتاپ ویندوز
  *
- * این فرایند سه کار انجام می‌دهد:
+ * این فرایند چهار کار انجام می‌دهد:
  *   ۱) یک PostgreSQL همراه برنامه (embedded) را در پوشه داده کاربر اجرا می‌کند
  *      (و در صورت خطای دیتابیس روی سیستم کاربر، با فایل محلی ادامه می‌دهد).
  *   ۲) در اولین اجرا جدول‌ها را می‌سازد و حساب مدیر اولیه را ایجاد می‌کند.
  *   ۳) سرور Next.js را روی 127.0.0.1 اجرا و پنجره برنامه را باز می‌کند.
+ *   ۴) در نسخه‌های نصب‌شده، به‌روزرسانی‌های جدید را به‌صورت خودکار از GitHub بررسی و نصب می‌کند.
  */
-const { app, BrowserWindow, dialog, shell, Menu } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, Menu } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const http = require('node:http');
@@ -16,16 +17,17 @@ const { spawn } = require('node:child_process');
 const { randomBytes, scryptSync } = require('node:crypto');
 
 // --------------------------------------------------------------------------
-// حالت کاملاً آفلاین
-// تنها آدرس مجاز 127.0.0.1 (سرور داخلی برنامه) است؛ Chromium هیچ درخواستی به
-// اینترنت یا DNS بیرونی نمی‌فرستد. فونت‌ها، آیکون‌ها و PDF همگی محلی‌اند.
+// محدودسازی شبکه: پنجره برنامه فقط به 127.0.0.1 متصل می‌شود و دامنه‌های GitHub
+// فقط برای سرویس به‌روزرسانی خودکار در فرایند اصلی مجاز هستند.
 // --------------------------------------------------------------------------
 app.commandLine.appendSwitch(
   'host-resolver-rules',
-  'MAP * ~NOTFOUND, EXCLUDE 127.0.0.1',
+  'MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE github.com, EXCLUDE *.github.com, EXCLUDE *.githubusercontent.com',
 );
 
+const GITHUB_RELEASES_URL = 'https://github.com/agrin111/pish-factor-/releases/latest';
 const isDev = !app.isPackaged;
+const isPortable = Boolean(process.env.PORTABLE_EXECUTABLE_DIR);
 const projectRoot = path.join(__dirname, '..');
 const serverRoot = isDev
   ? path.join(projectRoot, '.next', 'standalone')
@@ -43,6 +45,15 @@ let splashWindow = null;
 let nextProcess = null;
 let postgres = null;
 let logStream = null;
+let autoUpdater = null;
+let manualCheckRequested = false;
+let shutdownPromise = null;
+
+let updateState = {
+  status: isDev ? 'unsupported' : 'idle',
+  currentVersion: app.getVersion(),
+  isPortable,
+};
 
 function log(...parts) {
   const line = `[${new Date().toISOString()}] ${parts.join(' ')}\n`;
@@ -50,6 +61,18 @@ function log(...parts) {
     logStream?.write(line);
   } catch {
     /* ignore */
+  }
+}
+
+function setUpdateState(patch) {
+  updateState = {
+    ...updateState,
+    ...patch,
+    currentVersion: app.getVersion(),
+    isPortable,
+  };
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updater:state-changed', updateState);
   }
 }
 
@@ -377,6 +400,182 @@ async function startApp() {
   return `http://127.0.0.1:${appPort}`;
 }
 
+function shutdown() {
+  if (shutdownPromise) return shutdownPromise;
+  shutdownPromise = (async () => {
+    try {
+      nextProcess?.kill();
+      nextProcess = null;
+    } catch {
+      /* ignore */
+    }
+    try {
+      await postgres?.stop();
+      postgres = null;
+    } catch {
+      /* ignore */
+    }
+  })();
+  return shutdownPromise;
+}
+
+async function installDownloadedUpdate() {
+  if (!autoUpdater) return;
+  log('آماده‌سازی نصب نسخه جدید و بستن سرور داخلی...');
+  await shutdown();
+  autoUpdater.quitAndInstall(false, true);
+}
+
+function initAutoUpdater() {
+  if (isDev) return;
+
+  try {
+    ({ autoUpdater } = require('electron-updater'));
+  } catch (err) {
+    log('electron-updater در دسترس نیست:', err?.message || String(err));
+    return;
+  }
+
+  autoUpdater.logger = {
+    info: (...args) => log('updater:', ...args),
+    warn: (...args) => log('updater-warn:', ...args),
+    error: (...args) => log('updater-err:', ...args),
+    debug: () => {},
+  };
+  autoUpdater.autoDownload = !isPortable;
+  autoUpdater.autoInstallOnAppQuit = !isPortable;
+
+  autoUpdater.on('checking-for-update', () => {
+    setUpdateState({ status: 'checking', message: undefined });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    log('نسخه جدید یافت شد:', info.version);
+    if (isPortable) {
+      setUpdateState({
+        status: 'portable-available',
+        availableVersion: info.version,
+        message: `نسخه ${info.version} روی گیت‌هاب منتشر شده است.`,
+      });
+    } else {
+      setUpdateState({
+        status: 'available',
+        availableVersion: info.version,
+        percent: 0,
+        message: `در حال دریافت نسخه ${info.version}...`,
+      });
+    }
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    setUpdateState({
+      status: manualCheckRequested ? 'up-to-date' : 'idle',
+      message: manualCheckRequested ? 'شما از آخرین نسخه استفاده می‌کنید.' : undefined,
+    });
+    manualCheckRequested = false;
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    const percent = Math.min(100, Math.max(0, Math.round(progress.percent || 0)));
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setProgressBar(percent / 100);
+    }
+    setUpdateState({
+      status: 'downloading',
+      percent,
+      message: `در حال دریافت به‌روزرسانی (${percent}٪)...`,
+    });
+  });
+
+  autoUpdater.on('update-downloaded', async (info) => {
+    log('به‌روزرسانی آماده نصب است:', info.version);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setProgressBar(-1);
+    }
+    setUpdateState({
+      status: 'downloaded',
+      availableVersion: info.version,
+      percent: 100,
+      message: `نسخه ${info.version} آماده نصب است.`,
+    });
+
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'به‌روزرسانی جدید آماده است',
+      message: `نسخه جدید Aghrin PishFactor (${info.version}) از گیت‌هاب دریافت شد.`,
+      detail:
+        'تمام اطلاعات شما (پیش‌فاکتورها، مشتریان و تنظیمات) حفظ می‌شود.\nآیا مایلید اکنون نصب و برنامه مجدداً راه‌اندازی شود؟',
+      buttons: ['نصب و راه‌اندازی مجدد', 'بعداً (هنگام خروج)'],
+      defaultId: 0,
+      cancelId: 1,
+    });
+
+    if (response === 0) {
+      await installDownloadedUpdate();
+    }
+  });
+
+  autoUpdater.on('error', (err) => {
+    log('خطا در بررسی به‌روزرسانی:', err?.message || String(err));
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setProgressBar(-1);
+    }
+    if (manualCheckRequested) {
+      setUpdateState({
+        status: 'error',
+        message: 'اتصال به گیت‌هاب برقرار نشد. اتصال اینترنت را بررسی کنید.',
+      });
+    } else {
+      setUpdateState({ status: 'idle', message: undefined });
+    }
+    manualCheckRequested = false;
+  });
+
+  setTimeout(() => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    manualCheckRequested = false;
+    autoUpdater.checkForUpdates().catch((err) => {
+      log('خطای بررسی خودکار به‌روزرسانی:', err?.message || String(err));
+    });
+  }, 6000);
+}
+
+function registerIpc() {
+  ipcMain.handle('updater:state', () => updateState);
+
+  ipcMain.handle('updater:check', async () => {
+    if (isDev || !autoUpdater) {
+      setUpdateState({
+        status: 'unsupported',
+        message: 'بررسی خودکار فقط در نسخه نصب‌شده ویندوز فعال است.',
+      });
+      return updateState;
+    }
+    manualCheckRequested = true;
+    try {
+      await autoUpdater.checkForUpdates();
+    } catch (err) {
+      log('خطای بررسی دستی به‌روزرسانی:', err?.message || String(err));
+      setUpdateState({
+        status: 'error',
+        message: 'بررسی به‌روزرسانی ناموفق بود. اتصال اینترنت را بررسی کنید.',
+      });
+      manualCheckRequested = false;
+    }
+    return updateState;
+  });
+
+  ipcMain.handle('updater:install', async () => {
+    await installDownloadedUpdate();
+  });
+
+  ipcMain.handle('updater:open-releases', async () => {
+    await shell.openExternal(GITHUB_RELEASES_URL);
+  });
+}
+
 function createSplash() {
   splashWindow = new BrowserWindow({
     width: 460,
@@ -405,7 +604,24 @@ function createMainWindow(url) {
       contextIsolation: true,
       nodeIntegration: false,
       spellcheck: false,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
+  });
+
+  // پنجره رابط کاربری فقط مجاز به درخواست به سرور محلی 127.0.0.1 است
+  mainWindow.webContents.session.webRequest.onBeforeRequest((details, callback) => {
+    try {
+      const parsed = new URL(details.url);
+      const allowed =
+        parsed.protocol === 'data:' ||
+        parsed.protocol === 'blob:' ||
+        parsed.protocol === 'file:' ||
+        parsed.protocol === 'devtools:' ||
+        parsed.hostname === '127.0.0.1';
+      callback({ cancel: !allowed });
+    } catch {
+      callback({ cancel: false });
+    }
   });
 
   Menu.setApplicationMenu(null);
@@ -415,6 +631,7 @@ function createMainWindow(url) {
     splashWindow?.destroy();
     splashWindow = null;
     mainWindow?.show();
+    initAutoUpdater();
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url: target }) => {
@@ -425,19 +642,6 @@ function createMainWindow(url) {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-}
-
-async function shutdown() {
-  try {
-    nextProcess?.kill();
-  } catch {
-    /* ignore */
-  }
-  try {
-    await postgres?.stop();
-  } catch {
-    /* ignore */
-  }
 }
 
 app.requestSingleInstanceLock();
@@ -451,6 +655,7 @@ app.on('second-instance', () => {
 
 app.whenReady().then(async () => {
   logStream = fs.createWriteStream(path.join(dataDir(), 'desktop.log'), { flags: 'a' });
+  registerIpc();
   createSplash();
   try {
     const url = await startApp();

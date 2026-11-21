@@ -2,7 +2,18 @@ name: Windows Installer
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'انتشار به عنوان GitHub Release (برای آپدیت خودکار کاربران)'
+        type: boolean
+        default: false
+      release_version:
+        description: 'شماره نسخه (مثلاً 1.0.1 — فقط در صورت انتشار Release)'
+        type: string
+        default: ''
   push:
+    tags:
+      - 'v*'
     branches:
       - main
     paths:
@@ -14,12 +25,15 @@ on:
       - 'desktop/**'
       - 'assets/**'
       - 'public/**'
+      - 'types/**'
       - 'scripts/build-desktop.mjs'
-      - 'desktop/build-windows.bat'
       - 'electron-builder.yml'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/windows-installer.yml'
+
+permissions:
+  contents: write
 
 jobs:
   build-windows:
@@ -37,6 +51,28 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: همگام‌سازی نسخه برای Release
+        id: version
+        shell: pwsh
+        run: |
+          $tagVersion = ""
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $tagVersion = "${{ github.ref_name }}".TrimStart('v')
+          } elseif ("${{ inputs.release_version }}" -ne "") {
+            $tagVersion = "${{ inputs.release_version }}".TrimStart('v')
+          }
+          if ($tagVersion -ne "") {
+            npm version --no-git-tag-version --allow-same-version $tagVersion
+            echo "tag=v$tagVersion" >> $env:GITHUB_OUTPUT
+            echo "should_release=true" >> $env:GITHUB_OUTPUT
+          } elseif ("${{ inputs.publish_release }}" -eq "true") {
+            $pkgVersion = (Get-Content package.json | ConvertFrom-Json).version
+            echo "tag=v$pkgVersion" >> $env:GITHUB_OUTPUT
+            echo "should_release=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "should_release=false" >> $env:GITHUB_OUTPUT
+          }
+
       - name: نصب وابستگی‌ها
         run: npm ci
 
@@ -46,17 +82,17 @@ jobs:
       - name: ساخت نصب‌کننده و نسخه پرتابل ویندوز
         run: npm run desktop:build
 
-      - name: بارگذاری خروجی‌ها
+      - name: بارگذاری خروجی‌ها به عنوان Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AghrinPishFactor-Windows
-          path: release/*.exe
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
           if-no-files-found: error
           retention-days: 30
 
-      # نسخه «بدون نصب» به شکل پوشه آماده اجرا؛ نه نصب می‌خواهد و نه از
-      # خوداستخراج‌کننده NSIS استفاده می‌کند. کاربر پوشه را از zip خارج می‌کند
-      # و «Aghrin Pish Factor.exe» را دوبار کلیک می‌کند.
       - name: بارگذاری نسخه بدون نصب (پوشه آماده اجرا)
         uses: actions/upload-artifact@v4
         with:
@@ -65,3 +101,16 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 30
+
+      - name: انتشار در GitHub Releases (برای به‌روزرسانی خودکار)
+        if: steps.version.outputs.should_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Aghrin PishFactor ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            release/latest.yml
+            release/AghrinPishFactor-Setup-*.exe
+            release/AghrinPishFactor-Setup-*.exe.blockmap
+            release/AghrinPishFactor-Portable-*.exe

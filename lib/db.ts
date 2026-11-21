@@ -245,16 +245,18 @@ function persistMockStore(store: MockStore): void {
 
 function getMockStore(): MockStore {
   if (!global.__mockPrismaStore) {
+    const defaults = createInitialMockStore();
     const file = process.env.PISHFACTOR_DATA_FILE;
     if (file && fs.existsSync(file)) {
       try {
-        global.__mockPrismaStore = deserializeMockStore(fs.readFileSync(file, 'utf8'));
+        const loaded = deserializeMockStore(fs.readFileSync(file, 'utf8'));
+        global.__mockPrismaStore = { ...defaults, ...loaded };
       } catch {
-        global.__mockPrismaStore = createInitialMockStore();
+        global.__mockPrismaStore = defaults;
         persistMockStore(global.__mockPrismaStore);
       }
     } else {
-      global.__mockPrismaStore = createInitialMockStore();
+      global.__mockPrismaStore = defaults;
       persistMockStore(global.__mockPrismaStore);
     }
   }
