@@ -23,7 +23,11 @@ set NEXT_TELEMETRY_DISABLED=1
 if not exist "node_modules\" (
   echo [1/3] نصب وابستگی‌ها... این مرحله فقط یک بار و با اینترنت انجام می‌شود.
   call npm ci
-  if errorlevel 1 goto failed
+  if errorlevel 1 (
+    echo [!] همگام‌سازی lockfile با npm install...
+    call npm install
+    if errorlevel 1 goto failed
+  )
 ) else (
   echo [1/3] وابستگی‌ها از قبل نصب شده‌اند.
 )
