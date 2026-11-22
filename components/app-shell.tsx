@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/brand-logo';
+import { UpdateToast } from '@/components/update-toast';
 import { logoutAction } from '@/actions/auth';
 import type { Role } from '@prisma/client';
 import { formatJalaliLong } from '@/lib/jalali';
@@ -201,7 +202,11 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
                     className="inline-flex items-center gap-1 rounded-lg bg-[#5fb79b] px-2.5 py-1 text-[11px] font-semibold text-[#172535] transition hover:bg-[#73c5aa]"
                   >
                     <Download className="h-3 w-3" />
-                    <span>نصب و راه‌اندازی مجدد</span>
+                    <span>
+                      {desktopState.isPortable
+                        ? 'جایگزینی و راه‌اندازی مجدد'
+                        : 'نصب و راه‌اندازی مجدد'}
+                    </span>
                   </button>
                 ) : desktopState.status === 'available' ? (
                   <button
@@ -210,7 +215,9 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
                     className="inline-flex items-center gap-1 rounded-lg bg-[#5fb79b] px-2.5 py-1 text-[11px] font-semibold text-[#172535] transition hover:bg-[#73c5aa]"
                   >
                     <Download className="h-3 w-3" />
-                    <span>دریافت و نصب</span>
+                    <span>
+                      {desktopState.isPortable ? 'دریافت و جایگزینی' : 'دریافت و نصب'}
+                    </span>
                   </button>
                 ) : desktopState.status === 'portable-available' ? (
                   <button
@@ -312,6 +319,14 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
 
         <main className="mx-auto w-full max-w-[1360px] flex-1 p-4 sm:p-6 lg:px-8 lg:py-7 print:m-0 print:max-w-none print:p-0">{children}</main>
       </div>
+
+      <UpdateToast
+        state={desktopState}
+        onUpdate={() => void window.pishfactorDesktop?.downloadUpdate?.()}
+        onInstall={() => void window.pishfactorDesktop?.installUpdate()}
+        onOpenReleases={() => void window.pishfactorDesktop?.openReleasesPage()}
+        onRetryCheck={() => void handleCheckUpdates()}
+      />
     </div>
   );
 }

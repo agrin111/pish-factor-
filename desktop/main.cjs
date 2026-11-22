@@ -15,10 +15,11 @@ const http = require('node:http');
 const net = require('node:net');
 const { spawn } = require('node:child_process');
 const { randomBytes, scryptSync } = require('node:crypto');
+const { AutoUpdater } = require('./auto-updater.cjs');
 
 const GITHUB_RELEASES_URL = 'https://github.com/agrin111/pish-factor-/releases/latest';
 const isDev = !app.isPackaged;
-const isPortable = Boolean(process.env.PORTABLE_EXECUTABLE_DIR);
+const isPortable = Boolean(process.env.PORTABLE_EXECUTABLE_DIR || process.env.PORTABLE_EXECUTABLE_FILE);
 const projectRoot = path.join(__dirname, '..');
 const serverRoot = isDev
   ? path.join(projectRoot, '.next', 'standalone')
@@ -36,20 +37,11 @@ let splashWindow = null;
 let nextProcess = null;
 let postgres = null;
 let logStream = null;
-let autoUpdater = null;
-let manualCheckRequested = false;
+let autoUpdaterService = null;
 let shutdownPromise = null;
 let isQuitting = false;
 let shutdownCompleted = false;
-let isInstallingUpdate = false;
-let isDownloadingUpdate = false;
 let activePgDataDir = null;
-
-let updateState = {
-  status: isDev ? 'unsupported' : 'idle',
-  currentVersion: app.getVersion(),
-  isPortable,
-};
 
 function log(...parts) {
   const line = `[${new Date().toISOString()}] ${parts.join(' ')}\n`;
@@ -60,16 +52,32 @@ function log(...parts) {
   }
 }
 
-function setUpdateState(patch) {
-  updateState = {
-    ...updateState,
-    ...patch,
-    currentVersion: app.getVersion(),
-    isPortable,
-  };
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('updater:state-changed', updateState);
+function getUpdaterService() {
+  if (!autoUpdaterService) {
+    autoUpdaterService = new AutoUpdater({
+      app,
+      dialog,
+      shell,
+      session,
+      getMainWindow: () => mainWindow,
+      shutdown: async () => {
+        isQuitting = true;
+        await shutdown();
+      },
+      onExitApp: (code) => {
+        isQuitting = true;
+        shutdownCompleted = true;
+        try {
+          logStream?.end();
+        } catch {
+          /* ignore */
+        }
+        app.exit(code);
+      },
+      log,
+    });
   }
+  return autoUpdaterService;
 }
 
 function dataDir() {
@@ -421,6 +429,7 @@ async function startApp() {
 
 function shutdown() {
   if (shutdownPromise) return shutdownPromise;
+  autoUpdaterService?.stop();
   shutdownPromise = (async () => {
     const proc = nextProcess;
     nextProcess = null;
@@ -504,245 +513,23 @@ function shutdown() {
   return shutdownPromise;
 }
 
-async function installDownloadedUpdate() {
-  if (!autoUpdater || isInstallingUpdate) return;
-  isInstallingUpdate = true;
-  isQuitting = true;
-  log('آماده‌سازی نصب نسخه جدید و بستن سرور داخلی...');
-  try {
-    await shutdown();
-    setImmediate(() => {
-      // نصب بی‌صدا (/S) + اجرای خودکار نسخه جدید پس از پایان نصب (--force-run)
-      autoUpdater.quitAndInstall(true, true);
-    });
-  } catch (err) {
-    isInstallingUpdate = false;
-    log('خطا هنگام آماده‌سازی نصب نسخه جدید:', err?.message || String(err));
-  }
-}
-
-function formatUpdaterError(err) {
-  const raw = err?.message || String(err || '');
-  const isMissingReleaseOrPrivate =
-    raw.includes('404') ||
-    raw.includes('ERR_UPDATER_LATEST_VERSION_NOT_FOUND') ||
-    raw.includes('ERR_UPDATER_NO_PUBLISHED_VERSIONS') ||
-    raw.includes('ERR_UPDATER_CHANNEL_FILE_NOT_FOUND') ||
-    raw.includes('No published versions') ||
-    raw.includes('Cannot find latest.yml');
-
-  if (isMissingReleaseOrPrivate) {
-    return 'در گیت‌هاب نسخه قابل دریافت پیدا نشد (مطمئن شوید مخزن عمومی است و Release جدید همراه latest.yml منتشر شده باشد).';
-  }
-  return 'اتصال به گیت‌هاب برقرار نشد. اتصال اینترنت را بررسی کنید.';
-}
-
 function initAutoUpdater() {
-  if (isDev) return;
-
-  const updateConfigPath = path.join(process.resourcesPath, 'app-update.yml');
-  log(
-    'راه‌اندازی بررسی به‌روزرسانی — نسخه:',
-    app.getVersion(),
-    '| پرتابل:',
-    isPortable,
-    '| تنظیمات آپدیت:',
-    fs.existsSync(updateConfigPath),
-  );
-
-  try {
-    ({ autoUpdater } = require('electron-updater'));
-  } catch (err) {
-    log('electron-updater در دسترس نیست:', err?.message || String(err));
-    return;
-  }
-
-  autoUpdater.logger = {
-    info: (...args) => log('updater:', ...args),
-    warn: (...args) => log('updater-warn:', ...args),
-    error: (...args) => log('updater-err:', ...args),
-    debug: () => {},
-  };
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = !isPortable;
-  autoUpdater.allowDowngrade = false;
-  autoUpdater.fullChangelog = false;
-
-  const startUpdateDownload = async (versionLabel) => {
-    if (isPortable || isDownloadingUpdate || updateState.status === 'downloaded') return;
-    isDownloadingUpdate = true;
-    setUpdateState({
-      status: 'downloading',
-      availableVersion: versionLabel ?? updateState.availableVersion,
-      percent: 0,
-      message: versionLabel
-        ? `در حال دریافت نسخه ${versionLabel}...`
-        : 'در حال دریافت به‌روزرسانی...',
-    });
-    try {
-      await autoUpdater.downloadUpdate();
-    } catch (err) {
-      isDownloadingUpdate = false;
-      log('خطا در دریافت به‌روزرسانی:', err?.message || String(err));
-      setUpdateState({
-        status: 'error',
-        message: formatUpdaterError(err),
-      });
-    }
-  };
-
-  autoUpdater.on('checking-for-update', () => {
-    setUpdateState({ status: 'checking', message: undefined });
-  });
-
-  autoUpdater.on('update-available', (info) => {
-    log('نسخه جدید یافت شد:', info.version);
-    if (isPortable) {
-      manualCheckRequested = false;
-      setUpdateState({
-        status: 'portable-available',
-        availableVersion: info.version,
-        message: `نسخه ${info.version} روی گیت‌هاب منتشر شده است.`,
-      });
-      return;
-    }
-
-    const triggerNow = manualCheckRequested;
-    manualCheckRequested = false;
-    setUpdateState({
-      status: 'available',
-      availableVersion: info.version,
-      percent: 0,
-      message: `نسخه جدید ${info.version} آماده دریافت است.`,
-    });
-    if (triggerNow) {
-      void startUpdateDownload(info.version);
-    }
-  });
-
-  autoUpdater.on('update-not-available', () => {
-    isDownloadingUpdate = false;
-    setUpdateState({
-      status: manualCheckRequested ? 'up-to-date' : 'idle',
-      message: manualCheckRequested ? 'شما از آخرین نسخه استفاده می‌کنید.' : undefined,
-    });
-    manualCheckRequested = false;
-  });
-
-  autoUpdater.on('download-progress', (progress) => {
-    const percent = Math.min(100, Math.max(0, Math.round(progress.percent || 0)));
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setProgressBar(percent / 100);
-    }
-    setUpdateState({
-      status: 'downloading',
-      percent,
-      message: `در حال دریافت به‌روزرسانی (${percent}٪)...`,
-    });
-  });
-
-  autoUpdater.on('update-downloaded', async (info) => {
-    isDownloadingUpdate = false;
-    log('به‌روزرسانی آماده نصب است:', info.version);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setProgressBar(-1);
-    }
-    setUpdateState({
-      status: 'downloaded',
-      availableVersion: info.version,
-      percent: 100,
-      message: `نسخه ${info.version} آماده نصب است.`,
-    });
-
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-
-    const { response } = await dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'به‌روزرسانی جدید آماده است',
-      message: `نسخه جدید Aghrin PishFactor (${info.version}) دریافت شد.`,
-      detail:
-        'تمام اطلاعات شما (پیش‌فاکتورها، مشتریان و تنظیمات) حفظ می‌شود.\nآیا مایلید اکنون به‌صورت خودکار نصب و نسخه جدید اجرا شود؟',
-      buttons: ['نصب و راه‌اندازی مجدد', 'بعداً (هنگام خروج)'],
-      defaultId: 0,
-      cancelId: 1,
-    });
-
-    if (response === 0) {
-      await installDownloadedUpdate();
-    }
-  });
-
-  autoUpdater.on('error', (err) => {
-    isDownloadingUpdate = false;
-    log('خطا در بررسی به‌روزرسانی:', err?.message || String(err));
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setProgressBar(-1);
-    }
-    if (manualCheckRequested) {
-      setUpdateState({
-        status: 'error',
-        message: formatUpdaterError(err),
-      });
-    } else {
-      setUpdateState({ status: 'idle', message: undefined });
-    }
-    manualCheckRequested = false;
-  });
-
-  autoUpdater._startUpdateDownload = startUpdateDownload;
-
-  const runBackgroundCheck = () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    if (isDownloadingUpdate || updateState.status === 'downloaded') return;
-    manualCheckRequested = false;
-    autoUpdater.checkForUpdates().catch((err) => {
-      log('خطای بررسی خودکار به‌روزرسانی:', err?.message || String(err));
-    });
-  };
-
-  setTimeout(runBackgroundCheck, 6000);
-  const timer = setInterval(runBackgroundCheck, 4 * 60 * 60 * 1000);
-  timer.unref?.();
+  getUpdaterService().start();
 }
 
 function registerIpc() {
-  ipcMain.handle('updater:state', () => updateState);
+  ipcMain.handle('updater:state', () => getUpdaterService().getState());
 
   ipcMain.handle('updater:check', async () => {
-    if (isDev || !autoUpdater) {
-      setUpdateState({
-        status: 'unsupported',
-        message: 'بررسی خودکار فقط در نسخه نصب‌شده ویندوز فعال است.',
-      });
-      return updateState;
-    }
-    if (isDownloadingUpdate || updateState.status === 'downloaded') {
-      return updateState;
-    }
-    manualCheckRequested = true;
-    try {
-      await autoUpdater.checkForUpdates();
-    } catch (err) {
-      log('خطای بررسی دستی به‌روزرسانی:', err?.message || String(err));
-      setUpdateState({
-        status: 'error',
-        message: formatUpdaterError(err),
-      });
-      manualCheckRequested = false;
-    }
-    return updateState;
+    return await getUpdaterService().checkForUpdates(true);
   });
 
   ipcMain.handle('updater:download', async () => {
-    if (isDev || !autoUpdater) return updateState;
-    if (typeof autoUpdater._startUpdateDownload === 'function') {
-      await autoUpdater._startUpdateDownload(updateState.availableVersion);
-    }
-    return updateState;
+    return await getUpdaterService().downloadUpdate();
   });
 
   ipcMain.handle('updater:install', async () => {
-    await installDownloadedUpdate();
+    await getUpdaterService().installUpdate();
   });
 
   ipcMain.handle('updater:open-releases', async () => {

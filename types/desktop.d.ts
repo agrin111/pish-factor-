@@ -16,6 +16,7 @@ export interface DesktopUpdateState {
   percent?: number;
   message?: string;
   isPortable?: boolean;
+  canSelfUpdate?: boolean;
 }
 
 export interface DesktopPrintResult {
