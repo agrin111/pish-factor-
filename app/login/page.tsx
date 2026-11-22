@@ -4,6 +4,8 @@ import { getSessionUser } from '@/lib/auth';
 import { getCompanySettings } from '@/lib/settings';
 import { BrandLogo } from '@/components/brand-logo';
 import { LoginForm } from '@/components/login-form';
+import { toPersianDigits } from '@/lib/format';
+import pkg from '@/package.json';
 
 export const dynamic = 'force-dynamic';
 
@@ -108,7 +110,7 @@ export default async function LoginPage({
           </div>
 
           <div className="relative mt-10 border-t border-white/10 pt-4 text-[11px] text-slate-400">
-            نسخه ۱.۰ — دسترسی فقط برای کاربران مجاز شرکت
+            نسخه {toPersianDigits(pkg.version)} — دسترسی فقط برای کاربران مجاز شرکت
           </div>
         </div>
 
@@ -144,7 +146,7 @@ export default async function LoginPage({
       </div>
 
       <p className="absolute bottom-3 text-center text-[11px] text-slate-400">
-        © {new Date().getFullYear()} {company.companyName} — نسخه ۱.۰
+        © {new Date().getFullYear()} {company.companyName} — نسخه {toPersianDigits(pkg.version)}
       </p>
     </div>
   );

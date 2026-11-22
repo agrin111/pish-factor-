@@ -277,6 +277,10 @@ function getMockStore(): MockStore {
         }
         merged.quotation = merged.quotation.map((q) => ({
           letterheadType: 'MAIN',
+          customerPhone: null,
+          customerNationalId: null,
+          customerEconomicCode: null,
+          customerCity: null,
           ...q,
         }));
         let addedDefaultCategory = false;

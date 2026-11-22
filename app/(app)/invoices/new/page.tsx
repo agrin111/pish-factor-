@@ -16,7 +16,11 @@ export default async function NewInvoicePage() {
         id: true,
         name: true,
         mobile: true,
+        secondaryPhone: true,
         companyOrProject: true,
+        nationalId: true,
+        economicCode: true,
+        city: true,
         address: true,
       },
     }),
@@ -27,8 +31,11 @@ export default async function NewInvoicePage() {
         id: true,
         sku: true,
         name: true,
+        factory: true,
         specs: true,
         size: true,
+        thickness: true,
+        length: true,
         unit: true,
         unitPrice: true,
         weightPerUnitKg: true,
@@ -51,6 +58,7 @@ export default async function NewInvoicePage() {
         validDays: company.defaultValidDays,
         paymentTerms: company.defaultPaymentTerms,
         deliveryTerms: company.defaultDeliveryTerms,
+        notes: company.defaultNotes,
       }}
     />
   );

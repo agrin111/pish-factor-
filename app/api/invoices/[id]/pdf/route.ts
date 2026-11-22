@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { getSessionUser } from '@/lib/auth';
+import { getClientIp, getSessionUser } from '@/lib/auth';
 import { getCompanySettings } from '@/lib/settings';
 import { renderQuotationPdf } from '@/lib/pdf';
 import { buildInvoicePdfFileName } from '@/lib/pdf-filename';
@@ -49,6 +49,7 @@ export async function GET(
       entityType: 'quotation',
       entityId: quotation.id,
       summary: `دریافت PDF پیش‌فاکتور ${quotation.number} (${paperSize})`,
+      ipAddress: await getClientIp(),
     });
 
     return new Response(new Uint8Array(pdf), {

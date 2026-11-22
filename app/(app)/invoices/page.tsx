@@ -51,6 +51,8 @@ export default async function InvoicesPage({
       { customerName: { contains: params.q, mode: 'insensitive' } },
       { customerMobile: { contains: params.q } },
       { customerCompany: { contains: params.q, mode: 'insensitive' } },
+      { customerNationalId: { contains: params.q } },
+      { customerCity: { contains: params.q, mode: 'insensitive' } },
     ];
   }
 
@@ -232,6 +234,9 @@ export default async function InvoicesPage({
                     </td>
                     <td>
                       <div className="font-medium">{row.customerName}</div>
+                      {row.customerCompany && (
+                        <div className="muted text-[11px]">{row.customerCompany}</div>
+                      )}
                       <div className="muted numeric text-[11px]" dir="ltr">
                         {row.customerMobile}
                       </div>

@@ -54,6 +54,7 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ProductRow | null>(null);
   const [categoryOpen, setCategoryOpen] = useState(false);
@@ -69,6 +70,18 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
   );
   const [toggleState, toggleAction] = useActionState(toggleProductActiveAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteProductAction, initialActionState);
+
+  const [dismissedSave, setDismissedSave] = useState(initialActionState);
+  const [dismissedCategory, setDismissedCategory] = useState(initialActionState);
+  const [dismissedDeleteCategory, setDismissedDeleteCategory] = useState(initialActionState);
+  const [dismissedDelete, setDismissedDelete] = useState(initialActionState);
+
+  const visibleState = state !== dismissedSave ? state : initialActionState;
+  const visibleCategoryState =
+    categoryState !== dismissedCategory ? categoryState : initialActionState;
+  const visibleDeleteCategoryState =
+    deleteCategoryState !== dismissedDeleteCategory ? deleteCategoryState : initialActionState;
+  const visibleDeleteState = deleteState !== dismissedDelete ? deleteState : initialActionState;
 
   useEffect(() => {
     if (state.ok) {
@@ -104,12 +117,24 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
     const term = query.trim().toLowerCase();
     return products.filter((product) => {
       if (categoryFilter && product.categoryId !== categoryFilter) return false;
+      if (statusFilter === 'ACTIVE' && !product.isActive) return false;
+      if (statusFilter === 'INACTIVE' && product.isActive) return false;
       if (!term) return true;
-      return [product.name, product.sku, product.specs, product.size, product.factory]
+      return [
+        product.name,
+        product.sku,
+        product.specs,
+        product.size,
+        product.thickness,
+        product.length,
+        product.factory,
+        product.categoryName,
+        product.description,
+      ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term));
     });
-  }, [products, query, categoryFilter]);
+  }, [products, query, categoryFilter, statusFilter]);
 
   return (
     <div className="space-y-4">
@@ -127,6 +152,8 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
               type="button"
               className="btn btn-secondary"
               onClick={() => {
+                setDismissedCategory(categoryState);
+                setDismissedDeleteCategory(deleteCategoryState);
                 setEditingCategory(null);
                 setCategoryOpen(true);
               }}
@@ -138,6 +165,7 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
               type="button"
               className="btn btn-primary"
               onClick={() => {
+                setDismissedSave(state);
                 setEditing(null);
                 setOpen(true);
               }}
@@ -173,6 +201,16 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
             </option>
           ))}
         </select>
+        <select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE')}
+          className="select max-w-[150px]"
+          aria-label="فیلتر وضعیت کالا"
+        >
+          <option value="ALL">همه وضعیت‌ها</option>
+          <option value="ACTIVE">فقط فعال</option>
+          <option value="INACTIVE">فقط غیرفعال</option>
+        </select>
         <span className="muted text-xs">
           {new Intl.NumberFormat('fa-IR').format(filtered.length)} کالا
         </span>
@@ -193,9 +231,9 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
               <tr>
                 <th>کالا</th>
                 <th>کد</th>
-                <th>دسته‌بندی</th>
+                <th>دسته‌بندی / برند</th>
                 <th>مشخصات</th>
-                <th>واحد</th>
+                <th>واحد / وزن</th>
                 <th>قیمت واحد</th>
                 <th>وضعیت</th>
                 {isAdmin && <th>عملیات</th>}
@@ -204,11 +242,23 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
             <tbody>
               {filtered.map((product) => (
                 <tr key={product.id}>
-                  <td className="font-semibold">{product.name}</td>
+                  <td className="font-semibold">
+                    {product.name}
+                    {product.description && (
+                      <div className="muted mt-0.5 max-w-[220px] truncate text-[11px] font-normal">
+                        {product.description}
+                      </div>
+                    )}
+                  </td>
                   <td className="numeric" dir="ltr">
                     {product.sku}
                   </td>
-                  <td>{product.categoryName ?? '—'}</td>
+                  <td>
+                    <div>{product.categoryName ?? '—'}</div>
+                    {product.factory && (
+                      <div className="muted mt-0.5 text-[11px]">{product.factory}</div>
+                    )}
+                  </td>
                   <td className="max-w-[240px]">
                     <span className="muted line-clamp-2 text-[11px]">
                       {[product.size, product.thickness, product.length, product.specs]
@@ -216,7 +266,14 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
                         .join(' · ') || '—'}
                     </span>
                   </td>
-                  <td>{UNIT_LABEL[product.unit]}</td>
+                  <td>
+                    <div>{UNIT_LABEL[product.unit]}</div>
+                    {Number(product.weightPerUnitKg) > 0 && (
+                      <div className="muted numeric mt-0.5 text-[11px]">
+                        {formatNumber(product.weightPerUnitKg, 3)} ک‌گ
+                      </div>
+                    )}
+                  </td>
                   <td className="numeric">
                     {Number(product.unitPrice) > 0 ? (
                       formatCurrency(product.unitPrice, currency)
@@ -238,6 +295,7 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
                           type="button"
                           className="btn btn-secondary btn-sm"
                           onClick={() => {
+                            setDismissedSave(state);
                             setEditing(product);
                             setOpen(true);
                           }}
@@ -255,7 +313,10 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
                         <button
                           type="button"
                           className="btn btn-danger btn-sm"
-                          onClick={() => setConfirmId(product.id)}
+                          onClick={() => {
+                            setDismissedDelete(deleteState);
+                            setConfirmId(product.id);
+                          }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -278,18 +339,18 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
           setEditing(null);
         }}
       >
-        <form action={formAction} className="space-y-3">
+        <form key={editing?.id ?? 'new'} action={formAction} className="space-y-3">
           {editing && <input type="hidden" name="id" value={editing.id} />}
 
-          {state.message && (
+          {visibleState.message && (
             <div
               className={`rounded-lg border p-2.5 text-xs ${
-                state.ok
+                visibleState.ok
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                   : 'border-rose-200 bg-rose-50 text-rose-800'
               }`}
             >
-              {state.message}
+              {visibleState.message}
             </div>
           )}
 
@@ -306,7 +367,9 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
                 defaultValue={editing?.sku ?? ''}
                 required
               />
-              {state.errors?.sku && <p className="field-error">{state.errors.sku[0]}</p>}
+              {visibleState.errors?.sku && (
+                <p className="field-error">{visibleState.errors.sku[0]}</p>
+              )}
             </div>
 
             <div className="sm:col-span-2">
@@ -320,7 +383,9 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
                 defaultValue={editing?.name ?? ''}
                 required
               />
-              {state.errors?.name && <p className="field-error">{state.errors.name[0]}</p>}
+              {visibleState.errors?.name && (
+                <p className="field-error">{visibleState.errors.name[0]}</p>
+              )}
             </div>
 
             <div>
@@ -333,6 +398,8 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
                     type="button"
                     className="text-[11px] font-semibold text-[#347C65] hover:underline"
                     onClick={() => {
+                      setDismissedCategory(categoryState);
+                      setDismissedDeleteCategory(deleteCategoryState);
                       setEditingCategory(null);
                       setCategoryOpen(true);
                     }}
@@ -435,8 +502,8 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
                 defaultValue={editing?.unitPrice ?? '0'}
               />
               <p className="field-hint">قیمت هر کالا در زمان صدور هر پیش‌فاکتور وارد می‌شود.</p>
-              {state.errors?.unitPrice && (
-                <p className="field-error">{state.errors.unitPrice[0]}</p>
+              {visibleState.errors?.unitPrice && (
+                <p className="field-error">{visibleState.errors.unitPrice[0]}</p>
               )}
             </div>
           </div>
@@ -509,26 +576,26 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
           className="space-y-3"
         >
           {editingCategory && <input type="hidden" name="id" value={editingCategory.id} />}
-          {categoryState.message && (
+          {visibleCategoryState.message && (
             <div
               className={`rounded-lg border p-2.5 text-xs ${
-                categoryState.ok
+                visibleCategoryState.ok
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                   : 'border-rose-200 bg-rose-50 text-rose-800'
               }`}
             >
-              {categoryState.message}
+              {visibleCategoryState.message}
             </div>
           )}
-          {deleteCategoryState.message && (
+          {visibleDeleteCategoryState.message && (
             <div
               className={`rounded-lg border p-2.5 text-xs ${
-                deleteCategoryState.ok
+                visibleDeleteCategoryState.ok
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                   : 'border-rose-200 bg-rose-50 text-rose-800'
               }`}
             >
-              {deleteCategoryState.message}
+              {visibleDeleteCategoryState.message}
             </div>
           )}
           <div>
@@ -543,8 +610,8 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
               defaultValue={editingCategory?.name ?? ''}
               required
             />
-            {categoryState.errors?.name && (
-              <p className="field-error">{categoryState.errors.name[0]}</p>
+            {visibleCategoryState.errors?.name && (
+              <p className="field-error">{visibleCategoryState.errors.name[0]}</p>
             )}
           </div>
           <div>
@@ -624,9 +691,9 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
       <Modal open={Boolean(confirmId)} title="حذف کالا" onClose={() => setConfirmId(null)}>
         <form action={deleteAction} className="space-y-4">
           <input type="hidden" name="id" value={confirmId ?? ''} />
-          {deleteState.message && (
+          {visibleDeleteState.message && (
             <div className="rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-800">
-              {deleteState.message}
+              {visibleDeleteState.message}
             </div>
           )}
           <p className="text-sm leading-relaxed">

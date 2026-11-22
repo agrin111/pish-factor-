@@ -185,8 +185,12 @@ export default async function ReportsPage({
       </div>
 
       <div className="card">
-        <div className="border-b border-[#D7DEE5] px-5 py-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D7DEE5] px-5 py-3.5">
           <h2 className="section-title">فهرست اسناد بازه</h2>
+          <span className="muted numeric text-xs">
+            {formatNumber(report.documents.length, 0)} سند
+            {report.documents.length > 150 ? ' (نمایش ۱۵۰ سند اول — خروجی CSV کامل است)' : ''}
+          </span>
         </div>
         {report.documents.length === 0 ? (
           <p className="muted p-5 text-xs">سندی در این بازه ثبت نشده است.</p>
@@ -197,14 +201,16 @@ export default async function ReportsPage({
                 <tr>
                   <th>شماره</th>
                   <th>مشتری</th>
+                  <th>موبایل</th>
                   <th>تاریخ</th>
                   <th>صادرکننده</th>
+                  <th>وزن کل</th>
                   <th>مبلغ</th>
                   <th>وضعیت</th>
                 </tr>
               </thead>
               <tbody>
-                {report.documents.map((row) => (
+                {report.documents.slice(0, 150).map((row) => (
                   <tr key={row.id}>
                     <td>
                       <Link href={`/invoices/${row.id}`} className="numeric font-semibold hover:text-[#347C65]">
@@ -212,9 +218,15 @@ export default async function ReportsPage({
                       </Link>
                     </td>
                     <td>{row.customerName}</td>
+                    <td className="numeric" dir="ltr">
+                      {row.customerMobile || '—'}
+                    </td>
                     <td className="numeric">{formatJalali(row.issueDate)}</td>
                     <td>{row.userName}</td>
-                    <td className="numeric">{formatCurrency(row.amount, currency)}</td>
+                    <td className="numeric">
+                      {row.totalWeightKg > 0 ? `${formatNumber(row.totalWeightKg, 2)} ک‌گ` : '—'}
+                    </td>
+                    <td className="numeric">{formatCurrency(row.amount, row.currency)}</td>
                     <td>
                       <span className={STATUS_BADGE[row.status]}>{STATUS_LABEL[row.status]}</span>
                     </td>

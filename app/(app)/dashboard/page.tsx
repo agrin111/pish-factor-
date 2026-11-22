@@ -58,18 +58,25 @@ export default async function DashboardPage() {
     monthsBack.push({ jy: year, jm: month, start, end });
   }
 
+  const ownerScope = user.role === 'SALES' ? { createdById: user.id } : {};
+
   const [total, todayCount, statusGroups, amountAgg, recent, customers, chartRows] =
     await Promise.all([
-      prisma.quotation.count(),
+      prisma.quotation.count(user.role === 'SALES' ? { where: ownerScope } : undefined),
       prisma.quotation.count({
-        where: { issueDate: { gte: startOfToday, lt: startOfTomorrow } },
+        where: { ...ownerScope, issueDate: { gte: startOfToday, lt: startOfTomorrow } },
       }),
-      prisma.quotation.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.quotation.groupBy({
+        by: ['status'],
+        where: ownerScope,
+        _count: { _all: true },
+      }),
       prisma.quotation.aggregate({
         _sum: { grandTotal: true },
-        where: { status: { not: 'CANCELLED' } },
+        where: { ...ownerScope, status: { not: 'CANCELLED' } },
       }),
       prisma.quotation.findMany({
+        where: ownerScope,
         orderBy: { createdAt: 'desc' },
         take: 6,
         select: {
@@ -89,14 +96,14 @@ export default async function DashboardPage() {
         select: { id: true, name: true, mobile: true, companyOrProject: true, createdAt: true },
       }),
       prisma.quotation.findMany({
-        where: { issueDate: { gte: monthsBack[0].start } },
+        where: { ...ownerScope, issueDate: { gte: monthsBack[0].start } },
         select: { issueDate: true, grandTotal: true, status: true },
       }),
     ]);
 
   const countByStatus = new Map(statusGroups.map((row) => [row.status, row._count._all]));
   const expiredDerived = await prisma.quotation.count({
-    where: { status: 'SENT', validUntil: { lt: new Date() } },
+    where: { ...ownerScope, status: 'SENT', validUntil: { lt: today } },
   });
 
   const pending = Math.max(0, (countByStatus.get('SENT') ?? 0) - expiredDerived);
@@ -169,8 +176,8 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-xl font-extrabold">داشبورد فروش</h1>
           <p className="muted mt-1 text-xs">
-            {user.fullName} — {user.role === 'ADMIN' ? 'مدیر سیستم' : 'کارمند فروش'} · امروز{' '}
-            <span className="numeric">{formatJalali(today)}</span>
+            {user.fullName} — {user.role === 'ADMIN' ? 'مدیر سیستم' : 'کارمند فروش (اسناد شما)'} ·
+            امروز <span className="numeric">{formatJalali(today)}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -233,7 +240,9 @@ export default async function DashboardPage() {
               );
             })}
           </div>
-          <p className="muted mt-2 text-[10px]">مقادیر ستون‌ها به میلیون تومان نمایش داده شده است.</p>
+          <p className="muted mt-2 text-[10px]">
+            مقادیر ستون‌ها به میلیون {currency === 'RIAL' ? 'ریال' : 'تومان'} نمایش داده شده است.
+          </p>
         </div>
 
         <div className="card card-pad">

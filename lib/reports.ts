@@ -40,8 +40,11 @@ export interface ReportData {
     id: string;
     number: string;
     customerName: string;
+    customerMobile: string;
     issueDate: Date;
     amount: number;
+    currency: 'TOMAN' | 'RIAL';
+    totalWeightKg: number;
     status: QuotationStatus;
     userName: string;
   }[];
@@ -147,12 +150,15 @@ export async function loadReport(user: ReportUser, range: ReportRange): Promise<
     monthly: [...monthlyMap.values()].sort((a, b) => b.sort - a.sort).map(({ label, count, amount }) => ({ label, count, amount })),
     customers: [...customerMap.values()].sort((a, b) => b.amount - a.amount).slice(0, 10),
     users: [...userMap.values()].sort((a, b) => b.amount - a.amount),
-    documents: quotations.slice(0, 100).map((quotation) => ({
+    documents: quotations.map((quotation) => ({
       id: quotation.id,
       number: quotation.number,
       customerName: quotation.customerName,
+      customerMobile: quotation.customerMobile,
       issueDate: quotation.issueDate,
       amount: Number(quotation.grandTotal.toString()),
+      currency: quotation.currency,
+      totalWeightKg: Number(quotation.totalWeightKg?.toString() ?? '0'),
       status: effectiveStatus(quotation),
       userName: quotation.createdBy.fullName,
     })),

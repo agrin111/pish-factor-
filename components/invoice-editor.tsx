@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlertCircle, Plus, Save, Trash2 } from 'lucide-react';
+import { AlertCircle, ArrowDown, ArrowUp, Plus, Save, Trash2 } from 'lucide-react';
 import type { LetterheadType, QuotationStatus, UnitType } from '@prisma/client';
 import { saveQuotationAction } from '@/actions/quotations';
 import { initialActionState } from '@/lib/forms';
@@ -11,20 +11,31 @@ import { SubmitButton } from '@/components/submit-button';
 import {
   amountInWords,
   formatCurrency,
+  formatDocumentNumber,
   formatNumber,
   toEnglishDigits,
   toNumber,
   toPersianDigits,
 } from '@/lib/format';
 import { NumberField } from '@/components/number-field';
-import { STATUS_LABEL, UNITS, UNIT_LABEL } from '@/lib/labels';
+import {
+  DELIVERY_TERMS_SUGGESTIONS,
+  PAYMENT_TERMS_SUGGESTIONS,
+  STATUS_LABEL,
+  UNITS,
+  UNIT_LABEL,
+} from '@/lib/labels';
 import { addDays, formatJalali, parseJalaliInput } from '@/lib/jalali';
 
 export interface EditorCustomer {
   id: string;
   name: string;
   mobile: string;
+  secondaryPhone?: string | null;
   companyOrProject: string | null;
+  nationalId?: string | null;
+  economicCode?: string | null;
+  city?: string | null;
   address: string | null;
 }
 
@@ -32,8 +43,11 @@ export interface EditorProduct {
   id: string;
   sku: string;
   name: string;
+  factory?: string | null;
   specs: string | null;
   size: string | null;
+  thickness?: string | null;
+  length?: string | null;
   unit: UnitType;
   unitPrice: string;
   weightPerUnitKg: string;
@@ -41,6 +55,7 @@ export interface EditorProduct {
 
 export interface EditorQuotation {
   id: string;
+  number: string;
   customerId: string;
   issueDateLabel: string;
   validDays: number;
@@ -78,6 +93,7 @@ interface Props {
     validDays: number;
     paymentTerms: string | null;
     deliveryTerms: string | null;
+    notes?: string | null;
   };
   existing?: EditorQuotation;
 }
@@ -135,7 +151,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
   const [deliveryTerms, setDeliveryTerms] = useState(
     existing?.deliveryTerms ?? defaults.deliveryTerms ?? '',
   );
-  const [notes, setNotes] = useState(existing?.notes ?? '');
+  const [notes, setNotes] = useState(existing?.notes ?? defaults.notes ?? '');
   const [letterheadType, setLetterheadType] = useState<LetterheadType>(
     existing?.letterheadType ?? 'MAIN',
   );
@@ -165,6 +181,12 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
 
   const totals = useMemo(() => {
     const lines = rows.map((row) => Math.round(toNumber(row.quantity) * toNumber(row.unitPrice)));
+    const totalWeightKg = rows.reduce((acc, row) => {
+      const qty = toNumber(row.quantity);
+      if (row.unit === 'KILOGRAM') return acc + qty;
+      if (row.unit === 'TON') return acc + qty * 1000;
+      return acc + qty * toNumber(row.weightKg);
+    }, 0);
     const itemsSubtotal = lines.reduce((acc, line) => acc + line, 0);
     const transport = Math.round(toNumber(transportCost));
     const discount = Math.round(toNumber(discountAmount));
@@ -173,7 +195,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
       ? Math.round(Math.max(0, itemsSubtotal - discount) * (rate / 100))
       : 0;
     const grandTotal = Math.max(0, itemsSubtotal + transport + vatAmount - discount);
-    return { lines, itemsSubtotal, transport, discount, vatAmount, grandTotal };
+    return { lines, totalWeightKg, itemsSubtotal, transport, discount, vatAmount, grandTotal };
   }, [rows, transportCost, discountAmount, vatRate, includeVat]);
 
   useEffect(() => {
@@ -192,20 +214,44 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
   };
 
+  const moveRow = (index: number, delta: -1 | 1) => {
+    setRows((current) => {
+      const target = index + delta;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      const [moved] = next.splice(index, 1);
+      next.splice(target, 0, moved);
+      return next;
+    });
+  };
+
   const applyProduct = (key: string, productId: string) => {
     const product = products.find((item) => item.id === productId);
     if (!product) {
       updateRow(key, { productId: '' });
       return;
     }
+    const specParts = [
+      product.factory,
+      product.thickness ? `ضخامت ${product.thickness}` : null,
+      product.length ? `طول ${product.length}` : null,
+      product.specs,
+    ].filter((part): part is string => Boolean(part && part.trim()));
+    const combinedSpecs = specParts.join(' · ');
+    const currentRow = rows.find((item) => item.key === key);
+    const shouldPrefillPrice =
+      (!currentRow || currentRow.unitPrice.trim() === '' || currentRow.unitPrice === '0') &&
+      toNumber(product.unitPrice) > 0;
+
     updateRow(key, {
       productId: product.id,
       productName: product.name,
       sku: product.sku,
-      specs: product.specs ?? '',
+      specs: combinedSpecs,
       size: product.size ?? '',
       unit: product.unit,
       weightKg: product.weightPerUnitKg,
+      ...(shouldPrefillPrice ? { unitPrice: product.unitPrice } : {}),
     });
   };
 
@@ -301,7 +347,9 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-lg font-bold">
-            {existing ? `ویرایش پیش‌فاکتور ${existing.customerId ? '' : ''}` : 'صدور پیش‌فاکتور جدید'}
+            {existing
+              ? `ویرایش پیش‌فاکتور ${formatDocumentNumber(existing.number)}`
+              : 'صدور پیش‌فاکتور جدید'}
           </h1>
           <p className="muted mt-1 text-xs">
             شماره پیش‌فاکتور به‌صورت خودکار و یکتا تولید می‌شود؛ همه محاسبات در سرور بازبینی می‌شوند.
@@ -311,7 +359,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
           <Link href="/invoices" className="btn btn-secondary">
             بازگشت به آرشیو
           </Link>
-          <SubmitButton className="btn btn-primary" pendingLabel="در حال ذخیره...">
+          <SubmitButton className="btn btn-primary" pending={submitting} pendingLabel="در حال ذخیره...">
             <Save className="h-4 w-4" />
             {status === 'DRAFT' ? 'ذخیره پیش‌نویس' : 'ثبت نهایی سند'}
           </SubmitButton>
@@ -363,6 +411,19 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
           {selectedCustomer && (
             <p className="field-hint">
               موبایل: <span className="numeric">{selectedCustomer.mobile}</span>
+              {selectedCustomer.secondaryPhone ? (
+                <>
+                  {' '}
+                  · تماس دوم: <span className="numeric">{selectedCustomer.secondaryPhone}</span>
+                </>
+              ) : null}
+              {selectedCustomer.nationalId ? (
+                <>
+                  {' '}
+                  · شناسه/کد ملی: <span className="numeric">{selectedCustomer.nationalId}</span>
+                </>
+              ) : null}
+              {selectedCustomer.city ? ` · شهر: ${selectedCustomer.city}` : ''}
               {selectedCustomer.address ? ` — ${selectedCustomer.address}` : ''}
             </p>
           )}
@@ -484,21 +545,23 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
         </div>
 
         <div className="table-wrap !rounded-none !border-0">
-          <table className="data" style={{ minWidth: 980 }}>
+          <table className="data" style={{ minWidth: 1120 }}>
             <thead>
               <tr>
                 <th style={{ width: 46 }}>ردیف</th>
-                <th style={{ minWidth: 190 }}>کالای کاتالوگ</th>
-                <th style={{ minWidth: 170 }}>نام کالا *</th>
-                <th style={{ minWidth: 150 }}>مشخصات</th>
-                <th style={{ width: 90 }}>سایز</th>
-                <th style={{ width: 96 }}>واحد</th>
-                <th style={{ width: 90 }}>مقدار</th>
-                <th style={{ width: 150 }}>
+                <th style={{ minWidth: 180 }}>کالای کاتالوگ</th>
+                <th style={{ width: 96 }}>کد کالا</th>
+                <th style={{ minWidth: 160 }}>نام کالا *</th>
+                <th style={{ minWidth: 140 }}>مشخصات</th>
+                <th style={{ width: 84 }}>سایز</th>
+                <th style={{ width: 92 }}>واحد</th>
+                <th style={{ width: 88 }}>وزن واحد (ک‌گ)</th>
+                <th style={{ width: 86 }}>مقدار</th>
+                <th style={{ width: 145 }}>
                   قیمت واحد ({currency === 'RIAL' ? 'ریال' : 'تومان'}) *
                 </th>
                 <th style={{ width: 110 }}>مبلغ ردیف</th>
-                <th style={{ width: 46 }} />
+                <th style={{ width: 92 }}>ترتیب / حذف</th>
               </tr>
             </thead>
             <tbody>
@@ -507,6 +570,8 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                   ? products.find((item) => item.id === row.productId)
                   : undefined;
                 const catalogPrice = catalogProduct ? toNumber(catalogProduct.unitPrice) : 0;
+                const autoUnitWeight =
+                  row.unit === 'KILOGRAM' ? '۱' : row.unit === 'TON' ? '۱٬۰۰۰' : null;
 
                 return (
                 <tr key={row.key}>
@@ -524,6 +589,15 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                         </option>
                       ))}
                     </select>
+                  </td>
+                  <td>
+                    <input
+                      className="input numeric !py-1.5 text-xs"
+                      dir="ltr"
+                      value={row.sku}
+                      onChange={(event) => updateRow(row.key, { sku: event.target.value })}
+                      placeholder="کد"
+                    />
                   </td>
                   <td>
                     <input
@@ -564,6 +638,19 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                     </select>
                   </td>
                   <td>
+                    {autoUnitWeight ? (
+                      <div className="muted numeric px-1 text-center text-[11px]">
+                        خودکار ({autoUnitWeight})
+                      </div>
+                    ) : (
+                      <NumberField
+                        className="input numeric !py-1.5 text-xs"
+                        value={row.weightKg}
+                        onValueChange={(next) => updateRow(row.key, { weightKg: next })}
+                      />
+                    )}
+                  </td>
+                  <td>
                     <NumberField
                       className="input numeric !py-1.5 text-xs"
                       value={row.quantity}
@@ -593,21 +680,44 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                     {formatNumber(totals.lines[index] ?? 0, 0)}
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm !px-2 text-rose-700"
-                      onClick={() =>
-                        setRows((current) =>
-                          current.length === 1
-                            ? current
-                            : current.filter((item) => item.key !== row.key),
-                        )
-                      }
-                      disabled={rows.length === 1}
-                      aria-label="حذف ردیف"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    <div className="flex items-center justify-center gap-0.5">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm !px-1.5"
+                        onClick={() => moveRow(index, -1)}
+                        disabled={index === 0}
+                        aria-label="انتقال ردیف به بالا"
+                        title="بالا"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm !px-1.5"
+                        onClick={() => moveRow(index, 1)}
+                        disabled={index === rows.length - 1}
+                        aria-label="انتقال ردیف به پایین"
+                        title="پایین"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm !px-1.5 text-rose-700"
+                        onClick={() =>
+                          setRows((current) =>
+                            current.length === 1
+                              ? current
+                              : current.filter((item) => item.key !== row.key),
+                          )
+                        }
+                        disabled={rows.length === 1}
+                        aria-label="حذف ردیف"
+                        title="حذف"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
                 );
@@ -631,6 +741,18 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
               value={paymentTerms}
               onChange={(event) => setPaymentTerms(event.target.value)}
             />
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {PAYMENT_TERMS_SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => setPaymentTerms(suggestion)}
+                  className="rounded-md border border-[#D7DEE5] bg-[#F8FAFC] px-2 py-0.5 text-[11px] text-[#334155] transition-colors hover:border-[#347C65] hover:text-[#347C65]"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <label className="label" htmlFor="deliveryTerms">
@@ -643,6 +765,18 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
               value={deliveryTerms}
               onChange={(event) => setDeliveryTerms(event.target.value)}
             />
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {DELIVERY_TERMS_SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => setDeliveryTerms(suggestion)}
+                  className="rounded-md border border-[#D7DEE5] bg-[#F8FAFC] px-2 py-0.5 text-[11px] text-[#334155] transition-colors hover:border-[#347C65] hover:text-[#347C65]"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <label className="label" htmlFor="notes">
@@ -707,6 +841,14 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
               {formatCurrency(totals.discount, currency)}
             </span>
           </div>
+          {totals.totalWeightKg > 0 && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="muted">وزن کل محموله</span>
+              <span className="numeric font-semibold">
+                {formatNumber(totals.totalWeightKg, 2)} کیلوگرم
+              </span>
+            </div>
+          )}
 
           <div className="rounded-lg bg-[#F1F3F5] p-3">
             <div className="flex items-center justify-between text-sm font-extrabold">
@@ -718,9 +860,13 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
             </p>
           </div>
 
-          <SubmitButton className="btn btn-primary w-full" pendingLabel="در حال ذخیره...">
+          <SubmitButton
+            className="btn btn-primary w-full"
+            pending={submitting}
+            pendingLabel="در حال ذخیره..."
+          >
             <Save className="h-4 w-4" />
-            {submitting ? 'در حال ذخیره...' : 'ذخیره پیش‌فاکتور'}
+            ذخیره پیش‌فاکتور
           </SubmitButton>
         </div>
       </div>

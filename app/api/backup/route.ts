@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { getSessionUser } from '@/lib/auth';
+import { getClientIp, getSessionUser } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { formatJalali } from '@/lib/jalali';
 
@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 
 /**
  * خروجی JSON کامل داده‌های عملیاتی برای نگهداری در فضای امن خارج از سرور.
- * رمز عبور و نشست‌ها هرگز در خروجی قرار نمی‌گیرند.
+ * رمز عبور کاربران، نشست‌ها و رمز SMTP هرگز در خروجی قرار نمی‌گیرند.
  */
 export async function GET() {
   const user = await getSessionUser();
@@ -16,28 +16,39 @@ export async function GET() {
     return new Response('دسترسی غیرمجاز', { status: 403 });
   }
 
-  const [settings, categories, products, customers, quotations, audits, users] = await Promise.all([
-    prisma.companySettings.findUnique({ where: { id: 1 } }),
-    prisma.productCategory.findMany(),
-    prisma.product.findMany(),
-    prisma.customer.findMany(),
-    prisma.quotation.findMany({
-      include: { items: true, statusHistory: true },
-      orderBy: { createdAt: 'asc' },
-    }),
-    prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 500 }),
-    prisma.user.findMany({
-      select: {
-        id: true,
-        username: true,
-        fullName: true,
-        role: true,
-        isActive: true,
-        phone: true,
-        createdAt: true,
-      },
-    }),
-  ]);
+  const [rawSettings, categories, products, customers, quotations, audits, users] =
+    await Promise.all([
+      prisma.companySettings.findUnique({ where: { id: 1 } }),
+      prisma.productCategory.findMany(),
+      prisma.product.findMany(),
+      prisma.customer.findMany(),
+      prisma.quotation.findMany({
+        include: { items: true, statusHistory: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+      prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 500 }),
+      prisma.user.findMany({
+        select: {
+          id: true,
+          username: true,
+          fullName: true,
+          role: true,
+          isActive: true,
+          phone: true,
+          createdAt: true,
+        },
+      }),
+    ]);
+
+  const settings = rawSettings
+    ? (() => {
+        const { smtpPass, ...safeSettings } = rawSettings;
+        return {
+          ...safeSettings,
+          hasSmtpPass: Boolean(smtpPass),
+        };
+      })()
+    : null;
 
   const payload = {
     meta: {
@@ -61,6 +72,7 @@ export async function GET() {
     action: 'BACKUP_EXPORT',
     entityType: 'system',
     summary: 'دریافت نسخه پشتیبان JSON',
+    ipAddress: await getClientIp(),
   });
 
   return new Response(JSON.stringify(payload, null, 2), {

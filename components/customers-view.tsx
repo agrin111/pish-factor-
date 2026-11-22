@@ -33,11 +33,17 @@ interface Props {
 export function CustomersView({ customers, isAdmin }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'INDIVIDUAL' | 'COMPANY'>('ALL');
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CustomerRow | null>(null);
   const [state, formAction] = useActionState(saveCustomerAction, initialActionState);
   const [deleteState, deleteAction] = useActionState(deleteCustomerAction, initialActionState);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [dismissedSave, setDismissedSave] = useState(initialActionState);
+  const [dismissedDelete, setDismissedDelete] = useState(initialActionState);
+
+  const visibleSaveState = state !== dismissedSave ? state : initialActionState;
+  const visibleDeleteState = deleteState !== dismissedDelete ? deleteState : initialActionState;
 
   useEffect(() => {
     if (state.ok) {
@@ -56,20 +62,32 @@ export function CustomersView({ customers, isAdmin }: Props) {
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    if (!term) return customers;
-    return customers.filter((customer) =>
-      [customer.name, customer.mobile, customer.companyOrProject, customer.secondaryPhone]
+    return customers.filter((customer) => {
+      if (typeFilter !== 'ALL' && customer.customerType !== typeFilter) return false;
+      if (!term) return true;
+      return [
+        customer.name,
+        customer.mobile,
+        customer.secondaryPhone,
+        customer.companyOrProject,
+        customer.nationalId,
+        customer.economicCode,
+        customer.city,
+        customer.address,
+      ]
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(term)),
-    );
-  }, [customers, query]);
+        .some((value) => String(value).toLowerCase().includes(term));
+    });
+  }, [customers, query, typeFilter]);
 
   const openCreate = () => {
+    setDismissedSave(state);
     setEditing(null);
     setOpen(true);
   };
 
   const openEdit = (customer: CustomerRow) => {
+    setDismissedSave(state);
     setEditing(customer);
     setOpen(true);
   };
@@ -96,10 +114,20 @@ export function CustomersView({ customers, isAdmin }: Props) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             className="input pr-9"
-            placeholder="جستجوی نام مشتری، شماره موبایل یا نام شرکت..."
+            placeholder="جستجوی نام، موبایل، شرکت، کد/شناسه ملی، کد اقتصادی یا شهر..."
             aria-label="جستجوی مشتری"
           />
         </div>
+        <select
+          value={typeFilter}
+          onChange={(event) => setTypeFilter(event.target.value as 'ALL' | 'INDIVIDUAL' | 'COMPANY')}
+          className="select max-w-[160px]"
+          aria-label="فیلتر نوع مشتری"
+        >
+          <option value="ALL">همه مشتریان</option>
+          <option value="INDIVIDUAL">حقیقی</option>
+          <option value="COMPANY">حقوقی</option>
+        </select>
         <span className="muted text-xs">
           {new Intl.NumberFormat('fa-IR').format(filtered.length)} مشتری
         </span>
@@ -124,8 +152,9 @@ export function CustomersView({ customers, isAdmin }: Props) {
             <thead>
               <tr>
                 <th>نام مشتری</th>
-                <th>موبایل</th>
+                <th>موبایل / تماس</th>
                 <th>شرکت / پروژه</th>
+                <th>شناسه / کد اقتصادی</th>
                 <th>نوع</th>
                 <th>شهر</th>
                 <th>پیش‌فاکتورها</th>
@@ -145,9 +174,24 @@ export function CustomersView({ customers, isAdmin }: Props) {
                     )}
                   </td>
                   <td className="numeric" dir="ltr">
-                    {customer.mobile}
+                    <div>{customer.mobile}</div>
+                    {customer.secondaryPhone && (
+                      <div className="muted mt-0.5 text-[11px]">{customer.secondaryPhone}</div>
+                    )}
                   </td>
                   <td>{customer.companyOrProject ?? '—'}</td>
+                  <td className="numeric text-xs">
+                    {customer.nationalId || customer.economicCode ? (
+                      <div className="space-y-0.5">
+                        {customer.nationalId && <div>ملی: {customer.nationalId}</div>}
+                        {customer.economicCode && (
+                          <div className="muted text-[11px]">اقتصادی: {customer.economicCode}</div>
+                        )}
+                      </div>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td>
                     <span className="badge badge-gray">
                       {CUSTOMER_TYPE_LABEL[customer.customerType]}
@@ -169,7 +213,10 @@ export function CustomersView({ customers, isAdmin }: Props) {
                       {isAdmin && (
                         <button
                           type="button"
-                          onClick={() => setConfirmId(customer.id)}
+                          onClick={() => {
+                            setDismissedDelete(deleteState);
+                            setConfirmId(customer.id);
+                          }}
                           className="btn btn-danger btn-sm"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -193,18 +240,18 @@ export function CustomersView({ customers, isAdmin }: Props) {
           setEditing(null);
         }}
       >
-        <form action={formAction} className="space-y-3">
+        <form key={editing?.id ?? 'new'} action={formAction} className="space-y-3">
           {editing && <input type="hidden" name="id" value={editing.id} />}
 
-          {state.message && (
+          {visibleSaveState.message && (
             <div
               className={`rounded-lg border p-2.5 text-xs ${
-                state.ok
+                visibleSaveState.ok
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                   : 'border-rose-200 bg-rose-50 text-rose-800'
               }`}
             >
-              {state.message}
+              {visibleSaveState.message}
             </div>
           )}
 
@@ -219,9 +266,11 @@ export function CustomersView({ customers, isAdmin }: Props) {
                 className="input"
                 defaultValue={editing?.name ?? ''}
                 required
-                aria-invalid={Boolean(state.errors?.name)}
+                aria-invalid={Boolean(visibleSaveState.errors?.name)}
               />
-              {state.errors?.name && <p className="field-error">{state.errors.name[0]}</p>}
+              {visibleSaveState.errors?.name && (
+                <p className="field-error">{visibleSaveState.errors.name[0]}</p>
+              )}
             </div>
 
             <div>
@@ -236,9 +285,11 @@ export function CustomersView({ customers, isAdmin }: Props) {
                 inputMode="tel"
                 defaultValue={editing?.mobile ?? ''}
                 required
-                aria-invalid={Boolean(state.errors?.mobile)}
+                aria-invalid={Boolean(visibleSaveState.errors?.mobile)}
               />
-              {state.errors?.mobile && <p className="field-error">{state.errors.mobile[0]}</p>}
+              {visibleSaveState.errors?.mobile && (
+                <p className="field-error">{visibleSaveState.errors.mobile[0]}</p>
+              )}
             </div>
 
             <div>
@@ -362,15 +413,15 @@ export function CustomersView({ customers, isAdmin }: Props) {
       <Modal open={Boolean(confirmId)} title="حذف مشتری" onClose={() => setConfirmId(null)}>
         <form action={deleteAction} className="space-y-4">
           <input type="hidden" name="id" value={confirmId ?? ''} />
-          {deleteState.message && (
+          {visibleDeleteState.message && (
             <div
               className={`rounded-lg border p-2.5 text-xs ${
-                deleteState.ok
+                visibleDeleteState.ok
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                   : 'border-rose-200 bg-rose-50 text-rose-800'
               }`}
             >
-              {deleteState.message}
+              {visibleDeleteState.message}
             </div>
           )}
           <p className="text-sm leading-relaxed">

@@ -20,21 +20,39 @@ const loginSchema = z.object({
 const attempts = new Map<string, { count: number; first: number }>();
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 8;
+const MAX_IP_ATTEMPTS = 24;
+const MAX_TRACKED_KEYS = 2000;
 
-function isRateLimited(key: string): boolean {
+function pruneExpiredAttempts(now: number): void {
+  if (attempts.size <= MAX_TRACKED_KEYS) return;
+  for (const [k, entry] of attempts) {
+    if (now - entry.first > WINDOW_MS) {
+      attempts.delete(k);
+    }
+  }
+  while (attempts.size > MAX_TRACKED_KEYS) {
+    const oldestKey = attempts.keys().next().value;
+    if (!oldestKey) break;
+    attempts.delete(oldestKey);
+  }
+}
+
+function isRateLimited(key: string, max = MAX_ATTEMPTS): boolean {
   const entry = attempts.get(key);
   if (!entry) return false;
   if (Date.now() - entry.first > WINDOW_MS) {
     attempts.delete(key);
     return false;
   }
-  return entry.count >= MAX_ATTEMPTS;
+  return entry.count >= max;
 }
 
 function registerFailure(key: string): void {
+  const now = Date.now();
+  pruneExpiredAttempts(now);
   const entry = attempts.get(key);
-  if (!entry || Date.now() - entry.first > WINDOW_MS) {
-    attempts.set(key, { count: 1, first: Date.now() });
+  if (!entry || now - entry.first > WINDOW_MS) {
+    attempts.set(key, { count: 1, first: now });
     return;
   }
   entry.count += 1;
@@ -50,9 +68,10 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
 
   const username = parsed.data.username.toLowerCase();
   const ip = await getClientIp();
+  const ipKey = `ip|${ip ?? 'unknown'}`;
   const limitKey = `${username}|${ip ?? 'unknown'}`;
 
-  if (isRateLimited(limitKey)) {
+  if (isRateLimited(limitKey, MAX_ATTEMPTS) || isRateLimited(ipKey, MAX_IP_ATTEMPTS)) {
     return fail('تعداد تلاش‌های ناموفق زیاد است. لطفاً چند دقیقه بعد دوباره تلاش کنید.');
   }
 
@@ -61,6 +80,7 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
 
   if (!user || !valid) {
     registerFailure(limitKey);
+    registerFailure(ipKey);
     await logAudit({
       actorName: parsed.data.username,
       action: 'LOGIN_FAILED',

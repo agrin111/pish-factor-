@@ -141,8 +141,8 @@ export async function renderQuotationPdf(
 
   const ensureSpace = (needed: number) => {
     if (doc.y + needed > PAGE_H - MARGIN - footerReserve) {
-      doc.addPage();
       drawPageFooter();
+      doc.addPage();
       doc.y = MARGIN;
     }
   };
@@ -265,7 +265,42 @@ export async function renderQuotationPdf(
   let y = headerTop + headerH + (isA5 ? 8 : 12);
   const boxGap = isA5 ? 8 : 12;
   const boxW = (CONTENT_W - boxGap) / 2;
-  const boxH = isA5 ? 74 : 92;
+  const rowStep = isA5 ? 11.5 : 13;
+
+  const sellerRows: [string, string][] = [
+    ['نام شرکت', letterhead.companyName],
+    [
+      'شناسه / ثبت',
+      [
+        letterhead.nationalId,
+        letterhead.registrationNo ? `ثبت ${letterhead.registrationNo}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    ],
+    ['تلفن', [letterhead.phone, letterhead.secondaryPhone].filter(Boolean).join(' · ')],
+    ['نشانی', letterhead.address ?? ''],
+  ];
+
+  const buyerRows: [string, string][] = [
+    ['نام مشتری', quotation.customerName],
+    ['شرکت / پروژه', quotation.customerCompany ?? ''],
+    ['تلفن / موبایل', [quotation.customerMobile, quotation.customerPhone].filter(Boolean).join(' · ')],
+    ...(quotation.customerNationalId || quotation.customerEconomicCode
+      ? ([
+          [
+            'شناسه / اقتصادی',
+            [quotation.customerNationalId, quotation.customerEconomicCode]
+              .filter(Boolean)
+              .join(' · '),
+          ],
+        ] as [string, string][])
+      : []),
+    ['نشانی', [quotation.customerCity, quotation.customerAddress].filter(Boolean).join(' — ')],
+  ];
+
+  const maxInfoRows = Math.max(sellerRows.length, buyerRows.length);
+  const boxH = Math.max(isA5 ? 74 : 92, (isA5 ? 24 : 30) + maxInfoRows * rowStep + 4);
 
   const drawInfoBox = (x: number, title: string, rows: [string, string][]) => {
     doc.roundedRect(x, y, boxW, boxH, 5).lineWidth(0.8).strokeColor(GRAY).stroke();
@@ -274,8 +309,7 @@ export async function renderQuotationPdf(
     text(title, x + 6, y + (isA5 ? 4.5 : 6), { width: boxW - 12, align: 'right' });
     doc.font('fa').fontSize(isA5 ? 6.6 : 8);
     let rowY = y + (isA5 ? 21 : 26);
-    const labelW = isA5 ? 42 : 52;
-    const rowStep = isA5 ? 11.5 : 13;
+    const labelW = isA5 ? 46 : 58;
     for (const [label, value] of rows) {
       doc.fillColor(MUTED);
       text(`${label}:`, x + 6, rowY, { width: labelW, align: 'right' });
@@ -290,19 +324,8 @@ export async function renderQuotationPdf(
     }
   };
 
-  drawInfoBox(PAGE_W - MARGIN - boxW, 'مشخصات فروشنده', [
-    ['نام شرکت', letterhead.companyName],
-    ['شناسه ملی', letterhead.nationalId ?? ''],
-    ['تلفن', letterhead.phone ?? ''],
-    ['نشانی', letterhead.address ?? ''],
-  ]);
-
-  drawInfoBox(MARGIN, 'مشخصات خریدار', [
-    ['نام مشتری', quotation.customerName],
-    ['شرکت / پروژه', quotation.customerCompany ?? ''],
-    ['موبایل', quotation.customerMobile],
-    ['نشانی', quotation.customerAddress ?? ''],
-  ]);
+  drawInfoBox(PAGE_W - MARGIN - boxW, 'مشخصات فروشنده', sellerRows);
+  drawInfoBox(MARGIN, 'مشخصات خریدار', buyerRows);
 
   // -------------------------------------------------------------------- table
   y += boxH + (isA5 ? 9 : 14);
@@ -327,7 +350,7 @@ export async function renderQuotationPdf(
   };
 
   let tableY = drawTableHeader(y);
-  const visibleRows = quotation.items.slice(0, 40);
+  const visibleRows = quotation.items;
   const tableFontSize = isA5 ? 6.4 : 7.6;
 
   for (const item of visibleRows) {
@@ -398,6 +421,7 @@ export async function renderQuotationPdf(
   const termsGap = isA5 ? 8 : 12;
   const termsW = CONTENT_W - totalsW - termsGap;
 
+  const totalWeightNum = Number(quotation.totalWeightKg ?? 0);
   const totalsRows: [string, string][] = [
     ['جمع کل کالاها', `${formatNumber(quotation.itemsSubtotal, 0)} ${currency}`],
     ['هزینه حمل', `${formatNumber(quotation.transportCost, 0)} ${currency}`],
@@ -406,6 +430,9 @@ export async function renderQuotationPdf(
       quotation.includeVat ? `مالیات (${formatNumber(quotation.vatRate, 0)}٪)` : 'مالیات',
       quotation.includeVat ? `${formatNumber(quotation.vatAmount, 0)} ${currency}` : 'معاف',
     ],
+    ...(totalWeightNum > 0
+      ? ([['وزن کل محموله', `${formatNumber(totalWeightNum, 2)} کیلوگرم`]] as [string, string][])
+      : []),
   ];
 
   const termsText = [
@@ -431,7 +458,7 @@ export async function renderQuotationPdf(
   text('خلاصه مالی', totalsX + 6, y + (isA5 ? 5 : 7), { width: totalsW - 12, align: 'right' });
 
   let ty = y + (isA5 ? 24 : 30);
-  const valueColW = isA5 ? 68 : 74;
+  const valueColW = isA5 ? 74 : 86;
   for (const [label, value] of totalsRows) {
     doc.font('fa').fontSize(isA5 ? 6.8 : 8).fillColor(MUTED);
     text(label, totalsX + valueColW + 10, ty, {

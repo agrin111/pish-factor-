@@ -48,6 +48,11 @@ export function InvoiceActions({
     initialActionState,
   );
   const [deleteState, deleteAction] = useActionState(deleteQuotationAction, initialActionState);
+  const [dismissedStatus, setDismissedStatus] = useState(initialActionState);
+  const [dismissedDelete, setDismissedDelete] = useState(initialActionState);
+
+  const visibleStatusState = statusState !== dismissedStatus ? statusState : initialActionState;
+  const visibleDeleteState = deleteState !== dismissedDelete ? deleteState : initialActionState;
 
   useEffect(() => {
     if (statusState.ok) {
@@ -123,7 +128,10 @@ export function InvoiceActions({
       <button
         type="button"
         className="btn btn-ghost btn-sm"
-        onClick={() => setStatusOpen(true)}
+        onClick={() => {
+          setDismissedStatus(statusState);
+          setStatusOpen(true);
+        }}
         title="تغییر وضعیت"
       >
         وضعیت
@@ -133,7 +141,10 @@ export function InvoiceActions({
         <button
           type="button"
           className="btn btn-danger btn-sm"
-          onClick={() => setDeleteOpen(true)}
+          onClick={() => {
+            setDismissedDelete(deleteState);
+            setDeleteOpen(true);
+          }}
           title="حذف"
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -148,15 +159,15 @@ export function InvoiceActions({
       <Modal open={statusOpen} title="تغییر وضعیت پیش‌فاکتور" onClose={() => setStatusOpen(false)}>
         <form action={statusAction} className="space-y-3">
           <input type="hidden" name="id" value={id} />
-          {statusState.message && (
+          {visibleStatusState.message && (
             <div
               className={`rounded-lg border p-2.5 text-xs ${
-                statusState.ok
+                visibleStatusState.ok
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                   : 'border-rose-200 bg-rose-50 text-rose-800'
               }`}
             >
-              {statusState.message}
+              {visibleStatusState.message}
             </div>
           )}
           <div>
@@ -194,9 +205,9 @@ export function InvoiceActions({
       <Modal open={deleteOpen} title="حذف پیش‌فاکتور" onClose={() => setDeleteOpen(false)}>
         <form action={deleteAction} className="space-y-4">
           <input type="hidden" name="id" value={id} />
-          {deleteState.message && (
+          {visibleDeleteState.message && (
             <div className="rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-800">
-              {deleteState.message}
+              {visibleDeleteState.message}
             </div>
           )}
           <p className="text-sm leading-relaxed">

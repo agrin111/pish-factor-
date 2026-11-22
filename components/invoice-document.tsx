@@ -18,7 +18,11 @@ export interface DocumentQuotation {
   validDays: number;
   customerName: string;
   customerMobile: string;
+  customerPhone?: string | null;
   customerCompany: string | null;
+  customerNationalId?: string | null;
+  customerEconomicCode?: string | null;
+  customerCity?: string | null;
   customerAddress: string | null;
   currency: 'TOMAN' | 'RIAL';
   includeVat: boolean;
@@ -28,6 +32,7 @@ export interface DocumentQuotation {
   discountAmount: string;
   vatAmount: string;
   grandTotal: string;
+  totalWeightKg?: string;
   paymentTerms: string | null;
   deliveryTerms: string | null;
   notes: string | null;
@@ -36,6 +41,7 @@ export interface DocumentQuotation {
   items: {
     id: string;
     rowIndex: number;
+    sku?: string | null;
     productName: string;
     specs: string | null;
     size: string | null;
@@ -118,13 +124,19 @@ export function InvoiceDocument({ quotation, company }: Props) {
           <div className="rounded-lg border border-[#D7DEE5] p-3">
             <div className="mb-1.5 border-b border-[#D7DEE5] pb-1.5 font-bold">مشخصات فروشنده</div>
             <div>نام شرکت / فروشنده: {letterhead.companyName}</div>
-            {(letterhead.nationalId || letterhead.economicCode || !isMisc) && (
+            {(letterhead.nationalId || letterhead.economicCode || letterhead.registrationNo || !isMisc) && (
               <div className="numeric">
                 شناسه ملی: {letterhead.nationalId || 'تنظیم نشده'} · کد اقتصادی:{' '}
                 {letterhead.economicCode || 'تنظیم نشده'}
+                {letterhead.registrationNo ? ` · شماره ثبت: ${letterhead.registrationNo}` : ''}
               </div>
             )}
-            <div className="numeric">تلفن: {letterhead.phone || 'تنظیم نشده'}</div>
+            <div className="numeric">
+              تلفن:{' '}
+              {[letterhead.phone, letterhead.secondaryPhone].filter(Boolean).join(' · ') ||
+                'تنظیم نشده'}
+              {letterhead.email ? ` · ایمیل: ${letterhead.email}` : ''}
+            </div>
             <div>نشانی: {letterhead.address || 'تنظیم نشده'}</div>
           </div>
 
@@ -132,10 +144,31 @@ export function InvoiceDocument({ quotation, company }: Props) {
             <div className="mb-1.5 border-b border-[#D7DEE5] pb-1.5 font-bold">مشخصات خریدار</div>
             <div>نام مشتری: {quotation.customerName}</div>
             {quotation.customerCompany && <div>شرکت / پروژه: {quotation.customerCompany}</div>}
-            <div className="numeric" dir="ltr">
-              موبایل: {quotation.customerMobile}
+            <div className="numeric">
+              موبایل: <span dir="ltr">{quotation.customerMobile}</span>
+              {quotation.customerPhone ? (
+                <>
+                  {' '}
+                  · تلفن دوم: <span dir="ltr">{quotation.customerPhone}</span>
+                </>
+              ) : null}
             </div>
-            <div>نشانی: {quotation.customerAddress || '—'}</div>
+            {(quotation.customerNationalId || quotation.customerEconomicCode) && (
+              <div className="numeric">
+                {quotation.customerNationalId
+                  ? `شناسه / کد ملی: ${quotation.customerNationalId}`
+                  : ''}
+                {quotation.customerNationalId && quotation.customerEconomicCode ? ' · ' : ''}
+                {quotation.customerEconomicCode
+                  ? `کد اقتصادی: ${quotation.customerEconomicCode}`
+                  : ''}
+              </div>
+            )}
+            <div>
+              نشانی:{' '}
+              {[quotation.customerCity, quotation.customerAddress].filter(Boolean).join(' — ') ||
+                '—'}
+            </div>
           </div>
         </div>
 
@@ -162,6 +195,11 @@ export function InvoiceDocument({ quotation, company }: Props) {
                   </td>
                   <td className="border-l border-[#D7DEE5] px-1.5 py-1.5 font-semibold">
                     {item.productName}
+                    {item.sku && (
+                      <div className="muted numeric mt-0.5 text-[9px] font-normal" dir="ltr">
+                        کد: {item.sku}
+                      </div>
+                    )}
                   </td>
                   <td className="border-l border-[#D7DEE5] px-1.5 py-1.5 text-[#4A5A6A]">
                     {item.specs || '—'}
@@ -216,6 +254,12 @@ export function InvoiceDocument({ quotation, company }: Props) {
               </span>
               <span>{formatNumber(quotation.vatAmount, 0)}</span>
             </div>
+            {Number(quotation.totalWeightKg ?? 0) > 0 && (
+              <div className="flex justify-between numeric">
+                <span className="muted">وزن کل محموله</span>
+                <span>{formatNumber(quotation.totalWeightKg ?? 0, 2)} کیلوگرم</span>
+              </div>
+            )}
             <div className="mt-1.5 flex items-center justify-between border-t-2 border-[#172535] pt-1.5 text-xs font-extrabold numeric">
               <span>مبلغ نهایی</span>
               <span>{formatCurrency(quotation.grandTotal, quotation.currency)}</span>

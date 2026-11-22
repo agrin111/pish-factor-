@@ -9,8 +9,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await requireUser();
   const company = await getCompanySettings();
 
+  const invoiceScope = user.role === 'SALES' ? { createdById: user.id } : undefined;
+
   const [invoices, customers, products] = await Promise.all([
-    prisma.quotation.count(),
+    prisma.quotation.count(invoiceScope ? { where: invoiceScope } : undefined),
     prisma.customer.count(),
     prisma.product.count(),
   ]);

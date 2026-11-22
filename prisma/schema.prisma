@@ -152,10 +152,14 @@ model Quotation {
   customer      Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
 
   // Snapshot اطلاعات مشتری در زمان صدور
-  customerName    String
-  customerMobile  String
-  customerCompany String?
-  customerAddress String?
+  customerName         String
+  customerMobile       String
+  customerPhone        String?
+  customerCompany      String?
+  customerNationalId   String?
+  customerEconomicCode String?
+  customerCity         String?
+  customerAddress      String?
 
   currency        Currency @default(TOMAN)
   includeVat      Boolean  @default(false)

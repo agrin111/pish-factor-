@@ -28,7 +28,17 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
   const [customers, products] = await Promise.all([
     prisma.customer.findMany({
       orderBy: { name: 'asc' },
-      select: { id: true, name: true, mobile: true, companyOrProject: true, address: true },
+      select: {
+        id: true,
+        name: true,
+        mobile: true,
+        secondaryPhone: true,
+        companyOrProject: true,
+        nationalId: true,
+        economicCode: true,
+        city: true,
+        address: true,
+      },
     }),
     prisma.product.findMany({
       where: { OR: [{ isActive: true }, { id: { in: quotation.items.map((item) => item.productId ?? '') } }] },
@@ -37,8 +47,11 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
         id: true,
         sku: true,
         name: true,
+        factory: true,
         specs: true,
         size: true,
+        thickness: true,
+        length: true,
         unit: true,
         unitPrice: true,
         weightPerUnitKg: true,
@@ -61,9 +74,11 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
         validDays: company.defaultValidDays,
         paymentTerms: company.defaultPaymentTerms,
         deliveryTerms: company.defaultDeliveryTerms,
+        notes: company.defaultNotes,
       }}
       existing={{
         id: quotation.id,
+        number: quotation.number,
         customerId: quotation.customerId,
         issueDateLabel: formatJalali(quotation.issueDate),
         validDays: quotation.validDays,
@@ -77,18 +92,30 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
         deliveryTerms: quotation.deliveryTerms,
         notes: quotation.notes,
         letterheadType: quotation.letterheadType,
-        items: quotation.items.map((item) => ({
-          id: item.id,
-          productId: item.productId,
-          sku: item.sku,
-          productName: item.productName,
-          specs: item.specs,
-          size: item.size,
-          unit: item.unit,
-          quantity: item.quantity.toString(),
-          unitPrice: item.unitPrice.toString(),
-          weightKg: item.weightKg.toString(),
-        })),
+        items: quotation.items.map((item) => {
+          const qtyNum = Number(item.quantity.toString());
+          const rowWeightNum = Number(item.weightKg.toString());
+          const unitWeight =
+            item.unit === 'KILOGRAM'
+              ? '1'
+              : item.unit === 'TON'
+                ? '1000'
+                : qtyNum > 0
+                  ? String(Math.round((rowWeightNum / qtyNum) * 1000) / 1000)
+                  : '0';
+          return {
+            id: item.id,
+            productId: item.productId,
+            sku: item.sku,
+            productName: item.productName,
+            specs: item.specs,
+            size: item.size,
+            unit: item.unit,
+            quantity: item.quantity.toString(),
+            unitPrice: item.unitPrice.toString(),
+            weightKg: unitWeight,
+          };
+        }),
       }}
     />
   );

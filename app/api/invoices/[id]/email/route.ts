@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getSessionUser } from '@/lib/auth';
+import { getClientIp, getSessionUser } from '@/lib/auth';
 import { getCompanySettings, resolveLetterhead } from '@/lib/settings';
 import { renderQuotationPdf } from '@/lib/pdf';
 import { buildInvoicePdfFileName } from '@/lib/pdf-filename';
@@ -81,6 +81,9 @@ export async function POST(
       host: company.smtpHost,
       port,
       secure: company.smtpSecure || port === 465,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
       auth: {
         user: company.smtpUser,
         pass: company.smtpPass,
@@ -111,6 +114,7 @@ export async function POST(
       entityType: 'quotation',
       entityId: quotation.id,
       summary: `ارسال ایمیل پیش‌فاکتور ${quotation.number} (${parsed.data.paperSize}) به ${parsed.data.to}`,
+      ipAddress: await getClientIp(),
     });
 
     return NextResponse.json({

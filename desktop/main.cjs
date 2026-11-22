@@ -118,20 +118,26 @@ function loadConfig() {
   const dir = dataDir();
   const file = path.join(dir, 'config.json');
   let config = {};
-  if (fs.existsSync(file)) {
+  let dirty = !fs.existsSync(file);
+  if (!dirty) {
     try {
       config = JSON.parse(fs.readFileSync(file, 'utf8'));
     } catch {
       config = {};
+      dirty = true;
     }
   }
   if (!config.sessionSecret || config.sessionSecret.length < 32) {
     config.sessionSecret = randomBytes(48).toString('hex');
+    dirty = true;
   }
   if (!config.pgPassword) {
     config.pgPassword = randomBytes(24).toString('hex');
+    dirty = true;
   }
-  fs.writeFileSync(file, JSON.stringify(config, null, 2));
+  if (dirty) {
+    fs.writeFileSync(file, JSON.stringify(config, null, 2), { mode: 0o600 });
+  }
   return config;
 }
 
@@ -572,6 +578,31 @@ function registerIpc() {
     });
   });
 
+  const MAX_PDF_BYTES = 40 * 1024 * 1024;
+  const SAFE_USER_EXTS = new Set(['.pdf', '.csv', '.json', '.log']);
+
+  function isSafeUserDocumentPath(targetPath) {
+    if (!targetPath || typeof targetPath !== 'string') return false;
+    try {
+      const resolved = path.resolve(targetPath);
+      const ext = path.extname(resolved).toLowerCase();
+      if (!SAFE_USER_EXTS.has(ext)) return false;
+      if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) return false;
+      const allowedRoots = [
+        app.getPath('downloads'),
+        app.getPath('documents'),
+        app.getPath('desktop'),
+        app.getPath('userData'),
+      ].map((dir) => path.resolve(dir).toLowerCase());
+      const normalized = resolved.toLowerCase();
+      return allowedRoots.some(
+        (root) => normalized === root || normalized.startsWith(`${root}${path.sep}`),
+      );
+    } catch {
+      return false;
+    }
+  }
+
   ipcMain.handle('file:save-pdf', async (_event, payload) => {
     if (!mainWindow || mainWindow.isDestroyed()) {
       return { ok: false, error: 'پنجره برنامه در دسترس نیست.' };
@@ -582,6 +613,15 @@ function registerIpc() {
         '_',
       );
       const fileName = rawName.toLowerCase().endsWith('.pdf') ? rawName : `${rawName}.pdf`;
+      const bytes = payload?.bytes;
+      const buffer = Buffer.isBuffer(bytes)
+        ? bytes
+        : ArrayBuffer.isView(bytes)
+          ? Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+          : Buffer.from(bytes || []);
+      if (buffer.length === 0 || buffer.length > MAX_PDF_BYTES) {
+        return { ok: false, error: 'اندازه فایل PDF نامعتبر است.' };
+      }
       const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
         title: 'ذخیره فایل PDF',
         defaultPath: path.join(app.getPath('downloads'), fileName),
@@ -590,12 +630,6 @@ function registerIpc() {
       if (canceled || !filePath) {
         return { ok: false, canceled: true };
       }
-      const bytes = payload?.bytes;
-      const buffer = Buffer.isBuffer(bytes)
-        ? bytes
-        : ArrayBuffer.isView(bytes)
-          ? Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-          : Buffer.from(bytes || []);
       fs.writeFileSync(filePath, buffer);
       return { ok: true, filePath };
     } catch (err) {
@@ -605,10 +639,11 @@ function registerIpc() {
   });
 
   ipcMain.handle('file:open-path', async (_event, targetPath) => {
-    if (!targetPath || typeof targetPath !== 'string') return false;
+    if (!isSafeUserDocumentPath(targetPath)) return false;
     try {
+      const resolved = path.resolve(targetPath);
       const result = await Promise.race([
-        shell.openPath(targetPath),
+        shell.openPath(resolved),
         new Promise((resolve) => setTimeout(() => resolve(''), 3000)),
       ]);
       return result === '';
@@ -631,6 +666,10 @@ function registerIpc() {
         ? Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
         : Buffer.from(bytes || []);
 
+    if (buffer.length === 0 || buffer.length > MAX_PDF_BYTES) {
+      return { ok: false, error: 'اندازه فایل PDF نامعتبر است.' };
+    }
+
     const candidateDirs = [
       path.join(app.getPath('documents'), 'AghrinPishFactor-Exports'),
       path.join(app.getPath('downloads'), 'AghrinPishFactor-Exports'),
@@ -652,10 +691,11 @@ function registerIpc() {
   });
 
   ipcMain.handle('file:show-in-folder', (_event, targetPath) => {
-    if (!targetPath || typeof targetPath !== 'string') return false;
+    if (!isSafeUserDocumentPath(targetPath)) return false;
+    const resolved = path.resolve(targetPath);
     setImmediate(() => {
       try {
-        shell.showItemInFolder(targetPath);
+        shell.showItemInFolder(resolved);
       } catch (err) {
         log('خطا در نمایش فایل در پوشه:', err?.message || String(err));
       }
@@ -814,7 +854,7 @@ if (!gotSingleInstanceLock) {
         parsed.hostname === 'localhost';
       callback({ cancel: !allowed });
     } catch {
-      callback({ cancel: false });
+      callback({ cancel: true });
     }
   });
 

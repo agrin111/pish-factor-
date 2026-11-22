@@ -90,7 +90,11 @@ export async function saveQuotationAction(
         customerId: customer.id,
         customerName: customer.name,
         customerMobile: customer.mobile,
+        customerPhone: customer.secondaryPhone,
         customerCompany: customer.companyOrProject,
+        customerNationalId: customer.nationalId,
+        customerEconomicCode: customer.economicCode,
+        customerCity: customer.city,
         customerAddress: customer.address,
         currency: data.currency,
         includeVat: data.includeVat,
@@ -102,8 +106,8 @@ export async function saveQuotationAction(
         grandTotal: totals.grandTotal,
         totalWeightKg: totalWeight,
         itemCount: totals.itemCount,
-        paymentTerms: data.paymentTerms ?? company.defaultPaymentTerms,
-        deliveryTerms: data.deliveryTerms ?? company.defaultDeliveryTerms,
+        paymentTerms: data.paymentTerms ?? null,
+        deliveryTerms: data.deliveryTerms ?? null,
         notes: data.notes ?? null,
         letterheadType: data.letterheadType,
       };
@@ -309,6 +313,9 @@ export async function duplicateQuotationAction(
       include: { items: { orderBy: { rowIndex: 'asc' } } },
     });
     if (!source) return fail('پیش‌فاکتور یافت نشد.');
+    if (user.role !== 'ADMIN' && source.createdById !== user.id) {
+      return fail('شما مجاز به کپی این پیش‌فاکتور نیستید.');
+    }
 
     const company = await getCompanySettings();
     const today = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()));
@@ -325,7 +332,11 @@ export async function duplicateQuotationAction(
           customerId: source.customerId,
           customerName: source.customerName,
           customerMobile: source.customerMobile,
+          customerPhone: source.customerPhone,
           customerCompany: source.customerCompany,
+          customerNationalId: source.customerNationalId,
+          customerEconomicCode: source.customerEconomicCode,
+          customerCity: source.customerCity,
           customerAddress: source.customerAddress,
           currency: source.currency,
           includeVat: source.includeVat,

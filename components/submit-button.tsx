@@ -7,6 +7,7 @@ interface SubmitButtonProps {
   children: ReactNode;
   className?: string;
   pendingLabel?: string;
+  pending?: boolean;
   formAction?: (formData: FormData) => void;
   name?: string;
   value?: string;
@@ -17,23 +18,25 @@ export function SubmitButton({
   children,
   className = 'btn btn-primary',
   pendingLabel = 'در حال ذخیره...',
+  pending: externalPending,
   formAction,
   name,
   value,
   onClick,
 }: SubmitButtonProps) {
-  const { pending } = useFormStatus();
+  const { pending: formPending } = useFormStatus();
+  const isPending = Boolean(externalPending || formPending);
   return (
     <button
       type="submit"
       className={className}
-      disabled={pending}
+      disabled={isPending}
       formAction={formAction}
       name={name}
       value={value}
       onClick={onClick}
     >
-      {pending ? pendingLabel : children}
+      {isPending ? pendingLabel : children}
     </button>
   );
 }
