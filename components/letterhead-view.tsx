@@ -2,12 +2,13 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, FilePenLine, ImagePlus, Pencil, Printer, Save, Trash2, X } from 'lucide-react';
+import { Building2, FilePenLine, ImagePlus, Pencil, Save, Trash2, X } from 'lucide-react';
 import type { LetterheadType } from '@prisma/client';
 import { saveLetterheadAction } from '@/actions/settings';
 import { initialActionState } from '@/lib/forms';
 import { SubmitButton } from '@/components/submit-button';
 import { BrandLogo } from '@/components/brand-logo';
+import { PrintButton } from '@/components/print-button';
 import type { ResolvedLetterhead } from '@/lib/settings';
 
 interface Props {
@@ -122,10 +123,7 @@ export function LetterheadView({
               {editing ? 'بستن ویرایش' : 'ویرایش اطلاعات سربرگ'}
             </button>
           )}
-          <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-            <Printer className="h-4 w-4" />
-            چاپ سربرگ
-          </button>
+          <PrintButton showPaperSelector label="چاپ سربرگ" className="btn btn-primary" />
         </div>
       </div>
 

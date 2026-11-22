@@ -13,19 +13,23 @@ import { initialActionState } from '@/lib/forms';
 import { Modal } from '@/components/modal';
 import { SubmitButton } from '@/components/submit-button';
 import { STATUS_LABEL, STATUSES } from '@/lib/labels';
+import { downloadInvoicePdf } from '@/lib/print-and-pdf';
 import type { QuotationStatus } from '@prisma/client';
 
 interface Props {
   id: string;
+  documentNumber?: string;
   status: QuotationStatus;
   canEdit: boolean;
   canDelete: boolean;
 }
 
-export function InvoiceActions({ id, status, canEdit, canDelete }: Props) {
+export function InvoiceActions({ id, documentNumber, status, canEdit, canDelete }: Props) {
   const router = useRouter();
   const [statusOpen, setStatusOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState('');
   const [statusState, statusAction] = useActionState(changeQuotationStatusAction, initialActionState);
   const [duplicateState, duplicateAction] = useActionState(
     duplicateQuotationAction,
@@ -57,14 +61,26 @@ export function InvoiceActions({ id, status, canEdit, canDelete }: Props) {
         <Eye className="h-3.5 w-3.5" />
       </Link>
 
-      <Link
-        href={`/api/invoices/${id}/pdf`}
+      <button
+        type="button"
+        onClick={async () => {
+          setPdfError('');
+          setDownloadingPdf(true);
+          try {
+            const res = await downloadInvoicePdf(id, documentNumber ?? id, 'A4');
+            if (!res.ok && !res.canceled && res.error) {
+              setPdfError(res.error);
+            }
+          } finally {
+            setDownloadingPdf(false);
+          }
+        }}
+        disabled={downloadingPdf}
         className="btn btn-secondary btn-sm"
-        title="دانلود PDF"
-        target="_blank"
+        title="ذخیره PDF"
       >
         <Download className="h-3.5 w-3.5" />
-      </Link>
+      </button>
 
       {canEdit && (
         <Link href={`/invoices/${id}/edit`} className="btn btn-secondary btn-sm" title="ویرایش">
@@ -103,6 +119,7 @@ export function InvoiceActions({ id, status, canEdit, canDelete }: Props) {
       {duplicateState.message && !duplicateState.ok && (
         <span className="text-[10px] text-rose-700">{duplicateState.message}</span>
       )}
+      {pdfError && <span className="text-[10px] text-rose-700">{pdfError}</span>}
 
       <Modal open={statusOpen} title="تغییر وضعیت پیش‌فاکتور" onClose={() => setStatusOpen(false)}>
         <form action={statusAction} className="space-y-3">

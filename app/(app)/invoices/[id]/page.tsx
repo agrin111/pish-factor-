@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Download, Pencil, UserRound } from 'lucide-react';
+import { Pencil, UserRound } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { getCompanySettings } from '@/lib/settings';
 import { InvoiceDocument } from '@/components/invoice-document';
 import { InvoiceActions } from '@/components/invoice-actions';
-import { PrintButton } from '@/components/print-button';
+import { InvoiceOutputControls } from '@/components/invoice-output-controls';
 import { formatJalali } from '@/lib/jalali';
 import { formatDocumentNumber } from '@/lib/format';
 import { effectiveStatus } from '@/lib/quotation-status';
@@ -68,17 +68,14 @@ export default async function InvoiceDetailPage({
               ویرایش
             </Link>
           )}
-          <PrintButton />
-          <Link href={`/api/invoices/${quotation.id}/pdf`} className="btn btn-primary" target="_blank">
-            <Download className="h-4 w-4" />
-            دانلود PDF
-          </Link>
+          <InvoiceOutputControls id={quotation.id} documentNumber={quotation.number} />
         </div>
       </div>
 
       <div className="no-print card card-pad">
         <InvoiceActions
           id={quotation.id}
+          documentNumber={quotation.number}
           status={quotation.status}
           canEdit={canEdit}
           canDelete={user.role === 'ADMIN'}

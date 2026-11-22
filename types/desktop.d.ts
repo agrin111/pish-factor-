@@ -18,12 +18,28 @@ export interface DesktopUpdateState {
   isPortable?: boolean;
 }
 
+export interface DesktopPrintResult {
+  ok: boolean;
+  canceled?: boolean;
+  error?: string;
+}
+
+export interface DesktopSavePdfResult {
+  ok: boolean;
+  canceled?: boolean;
+  filePath?: string;
+  error?: string;
+}
+
 export interface PishfactorDesktopBridge {
   isDesktop: true;
   getUpdateState: () => Promise<DesktopUpdateState>;
   checkForUpdates: () => Promise<DesktopUpdateState>;
   installUpdate: () => Promise<void>;
   openReleasesPage: () => Promise<void>;
+  printDocument?: (pageSize: 'A4' | 'A5') => Promise<DesktopPrintResult>;
+  savePdf?: (bytes: Uint8Array, defaultFileName: string) => Promise<DesktopSavePdfResult>;
+  openFilePath?: (filePath: string) => Promise<boolean>;
   onUpdateState: (listener: (state: DesktopUpdateState) => void) => () => void;
 }
 

@@ -409,9 +409,12 @@ table.data tbody tr:hover td:first-child {
 }
 
 @media print {
+  html,
   body {
     background: #fff !important;
     background-image: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   .no-print {
     display: none !important;
@@ -419,8 +422,22 @@ table.data tbody tr:hover td:first-child {
   .print-area {
     box-shadow: none !important;
     border: none !important;
+    border-radius: 0 !important;
     margin: 0 !important;
+    padding: 0 !important;
     max-width: none !important;
+    width: 100% !important;
+  }
+  html[data-paper-size='A5'] .print-area {
+    font-size: 9px !important;
+    line-height: 1.45 !important;
+  }
+  html[data-paper-size='A5'] .print-area table {
+    font-size: 8.25px !important;
+  }
+  html[data-paper-size='A5'] .print-area th,
+  html[data-paper-size='A5'] .print-area td {
+    padding: 3px 4px !important;
   }
   .print-area * {
     -webkit-print-color-adjust: exact;

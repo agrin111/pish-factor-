@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { DatabaseBackup, ShieldAlert } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth';
 import { getCompanySettings } from '@/lib/settings';
@@ -28,10 +27,10 @@ export default async function SettingsPage() {
             ساختگی در سند درج نمی‌شود.
           </p>
         </div>
-        <Link href="/api/backup" className="btn btn-navy" target="_blank">
+        <a href="/api/backup" download className="btn btn-navy">
           <DatabaseBackup className="h-4 w-4" />
           دانلود نسخه پشتیبان JSON
-        </Link>
+        </a>
       </div>
 
       <SettingsForm

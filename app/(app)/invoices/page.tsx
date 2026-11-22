@@ -248,6 +248,7 @@ export default async function InvoicesPage({
                     <td>
                       <InvoiceActions
                         id={row.id}
+                        documentNumber={row.number}
                         status={row.status}
                         canEdit={canEdit}
                         canDelete={user.role === 'ADMIN'}

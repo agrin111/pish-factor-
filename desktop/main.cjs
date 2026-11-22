@@ -648,6 +648,78 @@ function registerIpc() {
   ipcMain.handle('updater:open-releases', async () => {
     await shell.openExternal(GITHUB_RELEASES_URL);
   });
+
+  ipcMain.handle('print:document', async (_event, options) => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return { ok: false, error: 'پنجره برنامه در دسترس نیست.' };
+    }
+    const pageSize = options?.pageSize === 'A5' ? 'A5' : 'A4';
+    return await new Promise((resolve) => {
+      try {
+        mainWindow.webContents.print(
+          {
+            silent: false,
+            printBackground: true,
+            pageSize,
+          },
+          (success, failureReason) => {
+            if (success) {
+              resolve({ ok: true });
+            } else if (failureReason === 'cancelled') {
+              resolve({ ok: false, canceled: true });
+            } else {
+              log('خطای چاپ:', failureReason || 'نامشخص');
+              resolve({
+                ok: false,
+                error: failureReason || 'ارسال به چاپگر انجام نشد.',
+              });
+            }
+          },
+        );
+      } catch (err) {
+        log('خطای چاپ:', err?.message || String(err));
+        resolve({ ok: false, error: 'ارسال به چاپگر با خطا مواجه شد.' });
+      }
+    });
+  });
+
+  ipcMain.handle('file:save-pdf', async (_event, payload) => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return { ok: false, error: 'پنجره برنامه در دسترس نیست.' };
+    }
+    try {
+      const rawName = String(payload?.defaultFileName || 'invoice.pdf').replace(
+        /[<>:"/\\|?*\x00-\x1F]/g,
+        '_',
+      );
+      const fileName = rawName.toLowerCase().endsWith('.pdf') ? rawName : `${rawName}.pdf`;
+      const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+        title: 'ذخیره فایل PDF',
+        defaultPath: path.join(app.getPath('downloads'), fileName),
+        filters: [{ name: 'فایل PDF', extensions: ['pdf'] }],
+      });
+      if (canceled || !filePath) {
+        return { ok: false, canceled: true };
+      }
+      const bytes = payload?.bytes;
+      const buffer = Buffer.isBuffer(bytes)
+        ? bytes
+        : ArrayBuffer.isView(bytes)
+          ? Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+          : Buffer.from(bytes || []);
+      fs.writeFileSync(filePath, buffer);
+      return { ok: true, filePath };
+    } catch (err) {
+      log('خطا در ذخیره فایل PDF:', err?.message || String(err));
+      return { ok: false, error: 'ذخیره فایل PDF در مسیر انتخابی انجام نشد.' };
+    }
+  });
+
+  ipcMain.handle('file:open-path', async (_event, targetPath) => {
+    if (!targetPath || typeof targetPath !== 'string') return false;
+    const result = await shell.openPath(targetPath);
+    return result === '';
+  });
 }
 
 function createSplash() {
@@ -693,6 +765,20 @@ function createMainWindow(url) {
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url: target }) => {
+    try {
+      const parsed = new URL(target);
+      const isLocal = parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost';
+      if (isLocal) {
+        if (parsed.pathname.startsWith('/api/')) {
+          mainWindow?.webContents.downloadURL(target);
+        } else {
+          mainWindow?.loadURL(target);
+        }
+        return { action: 'deny' };
+      }
+    } catch {
+      /* ignore invalid URL */
+    }
     shell.openExternal(target);
     return { action: 'deny' };
   });
@@ -729,6 +815,24 @@ app.whenReady().then(async () => {
       callback({ cancel: !allowed });
     } catch {
       callback({ cancel: false });
+    }
+  });
+
+  session.defaultSession.on('will-download', (_event, item) => {
+    const suggested = item.getFilename() || 'download';
+    const defaultPath = path.join(app.getPath('downloads'), suggested);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const chosen = dialog.showSaveDialogSync(mainWindow, {
+        title: 'ذخیره فایل',
+        defaultPath,
+      });
+      if (chosen) {
+        item.setSavePath(chosen);
+      } else {
+        item.cancel();
+      }
+    } else {
+      item.setSavePath(defaultPath);
     }
   });
 

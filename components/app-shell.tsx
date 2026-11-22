@@ -117,7 +117,7 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
       )}
 
       <aside
-        className={`sidebar-panel fixed inset-y-0 right-0 z-50 flex w-[268px] shrink-0 flex-col border-l border-white/5 bg-[linear-gradient(180deg,#172535_0%,#1a2c3e_62%,#1b3341_100%)] text-white shadow-[0_20px_50px_-30px_rgba(23,37,53,0.9)] lg:static ${
+        className={`no-print sidebar-panel fixed inset-y-0 right-0 z-50 flex w-[268px] shrink-0 flex-col border-l border-white/5 bg-[linear-gradient(180deg,#172535_0%,#1a2c3e_62%,#1b3341_100%)] text-white shadow-[0_20px_50px_-30px_rgba(23,37,53,0.9)] lg:static ${
           mobileOpen ? 'open' : ''
         }`}
       >
@@ -279,8 +279,8 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-[#D7DEE5]/80 bg-white/85 px-4 backdrop-blur-md sm:px-6 lg:px-8">
+      <div className="flex min-w-0 flex-1 flex-col print:block">
+        <header className="no-print sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-[#D7DEE5]/80 bg-white/85 px-4 backdrop-blur-md sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
@@ -301,7 +301,7 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1360px] flex-1 p-4 sm:p-6 lg:px-8 lg:py-7">{children}</main>
+        <main className="mx-auto w-full max-w-[1360px] flex-1 p-4 sm:p-6 lg:px-8 lg:py-7 print:m-0 print:max-w-none print:p-0">{children}</main>
       </div>
     </div>
   );

@@ -97,7 +97,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
             </div>
           </div>
 
-          <div className="space-y-0.5 border-[#D7DEE5] text-left sm:border-r sm:pr-5">
+          <div className="space-y-0.5 border-[#D7DEE5] text-left sm:border-r sm:pr-5 print:border-r print:pr-5">
             <div className="text-sm font-bold">پیش‌فاکتور فروش کالا</div>
             <div>
               شماره:{' '}
@@ -114,7 +114,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
         </div>
 
         {/* فروشنده و خریدار */}
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 print:grid-cols-2">
           <div className="rounded-lg border border-[#D7DEE5] p-3">
             <div className="mb-1.5 border-b border-[#D7DEE5] pb-1.5 font-bold">مشخصات فروشنده</div>
             <div>نام شرکت / فروشنده: {letterhead.companyName}</div>
@@ -188,8 +188,8 @@ export function InvoiceDocument({ quotation, company }: Props) {
         </div>
 
         {/* شرایط و مالی */}
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-12">
-          <div className="rounded-lg border border-[#D7DEE5] p-3 sm:col-span-7">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-12 print:grid-cols-12">
+          <div className="rounded-lg border border-[#D7DEE5] p-3 sm:col-span-7 print:col-span-7">
             <div className="mb-1 font-bold">شرایط پرداخت، تحویل و توضیحات</div>
             <div>شرایط پرداخت: {quotation.paymentTerms || '—'}</div>
             <div>شرایط تحویل: {quotation.deliveryTerms || '—'}</div>
@@ -197,7 +197,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
             {quotation.notes && <div>توضیحات: {quotation.notes}</div>}
           </div>
 
-          <div className="rounded-lg border border-[#172535] bg-[#F1F3F5]/50 p-3 sm:col-span-5">
+          <div className="rounded-lg border border-[#172535] bg-[#F1F3F5]/50 p-3 sm:col-span-5 print:col-span-5">
             <div className="flex justify-between numeric">
               <span className="muted">جمع کل کالاها</span>
               <span>{formatNumber(quotation.itemsSubtotal, 0)}</span>
