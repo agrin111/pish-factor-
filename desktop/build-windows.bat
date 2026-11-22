@@ -19,11 +19,15 @@ if errorlevel 1 (
 )
 
 set NEXT_TELEMETRY_DISABLED=1
+if not defined DATABASE_URL set DATABASE_URL=postgresql://user:pass@127.0.0.1:5432/pishfactor?schema=public
+if not defined SESSION_SECRET set SESSION_SECRET=build-time-only-secret-not-used-at-runtime-000000
 
 set NEED_INSTALL=0
 if not exist "node_modules\@embedded-postgres\windows-x64\" set NEED_INSTALL=1
 if not exist "node_modules\lightningcss-win32-x64-msvc\" set NEED_INSTALL=1
 if not exist "node_modules\electron-updater\" set NEED_INSTALL=1
+if not exist "node_modules\nodemailer\" set NEED_INSTALL=1
+if not exist "node_modules\.prisma\client\" set NEED_INSTALL=1
 
 if "%NEED_INSTALL%"=="1" (
   echo [1/3] نصب وابستگی‌ها برای ویندوز... این مرحله فقط یک بار و با اینترنت انجام می‌شود.
