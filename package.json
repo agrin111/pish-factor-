@@ -1,7 +1,7 @@
 {
   "name": "pish-factor",
   "productName": "Aghrin PishFactor",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "main": "desktop/main.cjs",
   "description": "Aghrin PishFactor — سامانه صدور پیش‌فاکتور شرکت آهن آگرین",

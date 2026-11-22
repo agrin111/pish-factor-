@@ -739,37 +739,60 @@ function registerIpc() {
 
   ipcMain.handle('file:open-path', async (_event, targetPath) => {
     if (!targetPath || typeof targetPath !== 'string') return false;
-    const result = await shell.openPath(targetPath);
-    return result === '';
+    try {
+      const result = await Promise.race([
+        shell.openPath(targetPath),
+        new Promise((resolve) => setTimeout(() => resolve(''), 3000)),
+      ]);
+      return result === '';
+    } catch (err) {
+      log('خطا در باز کردن فایل:', err?.message || String(err));
+      return false;
+    }
   });
 
   ipcMain.handle('file:save-share-pdf', async (_event, payload) => {
-    try {
-      const rawName = String(payload?.defaultFileName || 'invoice.pdf').replace(
-        /[<>:"/\\|?*\x00-\x1F]/g,
-        '_',
-      );
-      const fileName = rawName.toLowerCase().endsWith('.pdf') ? rawName : `${rawName}.pdf`;
-      const exportDir = path.join(app.getPath('documents'), 'AghrinPishFactor-Exports');
-      fs.mkdirSync(exportDir, { recursive: true });
-      const filePath = path.join(exportDir, fileName);
-      const bytes = payload?.bytes;
-      const buffer = Buffer.isBuffer(bytes)
-        ? bytes
-        : ArrayBuffer.isView(bytes)
-          ? Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-          : Buffer.from(bytes || []);
-      fs.writeFileSync(filePath, buffer);
-      return { ok: true, filePath };
-    } catch (err) {
-      log('خطا در آماده‌سازی فایل اشتراک‌گذاری:', err?.message || String(err));
-      return { ok: false, error: 'ذخیره فایل PDF برای اشتراک‌گذاری انجام نشد.' };
+    const rawName = String(payload?.defaultFileName || 'invoice.pdf').replace(
+      /[<>:"/\\|?*\x00-\x1F]/g,
+      '_',
+    );
+    const fileName = rawName.toLowerCase().endsWith('.pdf') ? rawName : `${rawName}.pdf`;
+    const bytes = payload?.bytes;
+    const buffer = Buffer.isBuffer(bytes)
+      ? bytes
+      : ArrayBuffer.isView(bytes)
+        ? Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+        : Buffer.from(bytes || []);
+
+    const candidateDirs = [
+      path.join(app.getPath('documents'), 'AghrinPishFactor-Exports'),
+      path.join(app.getPath('downloads'), 'AghrinPishFactor-Exports'),
+      path.join(dataDir(), 'exports'),
+    ];
+
+    for (const exportDir of candidateDirs) {
+      try {
+        await fs.promises.mkdir(exportDir, { recursive: true });
+        const filePath = path.join(exportDir, fileName);
+        await fs.promises.writeFile(filePath, buffer);
+        return { ok: true, filePath };
+      } catch (err) {
+        log('مسیر ذخیره اشتراک‌گذاری در دسترس نبود:', exportDir, err?.message || String(err));
+      }
     }
+
+    return { ok: false, error: 'ذخیره فایل PDF برای اشتراک‌گذاری انجام نشد.' };
   });
 
   ipcMain.handle('file:show-in-folder', (_event, targetPath) => {
     if (!targetPath || typeof targetPath !== 'string') return false;
-    shell.showItemInFolder(targetPath);
+    setImmediate(() => {
+      try {
+        shell.showItemInFolder(targetPath);
+      } catch (err) {
+        log('خطا در نمایش فایل در پوشه:', err?.message || String(err));
+      }
+    });
     return true;
   });
 
@@ -779,8 +802,29 @@ function registerIpc() {
       const parsed = new URL(targetUrl);
       const allowedProtocols = ['https:', 'http:', 'mailto:', 'tg:', 'whatsapp:'];
       if (!allowedProtocols.includes(parsed.protocol)) return false;
-      await shell.openExternal(targetUrl);
-      return true;
+
+      return await new Promise((resolve) => {
+        let settled = false;
+        const done = (value) => {
+          if (settled) return;
+          settled = true;
+          resolve(value);
+        };
+        const timer = setTimeout(() => done(true), 1200);
+        setImmediate(() => {
+          shell
+            .openExternal(targetUrl)
+            .then(() => {
+              clearTimeout(timer);
+              done(true);
+            })
+            .catch((err) => {
+              clearTimeout(timer);
+              log('خطا در باز کردن لینک خارجی:', targetUrl, err?.message || String(err));
+              done(false);
+            });
+        });
+      });
     } catch {
       return false;
     }
@@ -853,7 +897,18 @@ function createMainWindow(url) {
     } catch {
       /* ignore invalid URL */
     }
-    shell.openExternal(target);
+    try {
+      const parsedExternal = new URL(target);
+      if (['https:', 'http:', 'mailto:', 'tg:', 'whatsapp:'].includes(parsedExternal.protocol)) {
+        setImmediate(() => {
+          shell.openExternal(target).catch((err) => {
+            log('خطا در باز کردن لینک خارجی:', target, err?.message || String(err));
+          });
+        });
+      }
+    } catch {
+      /* ignore invalid URL */
+    }
     return { action: 'deny' };
   });
 

@@ -62,6 +62,7 @@ export function InvoiceShareModal({
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [preparedPath, setPreparedPath] = useState<string | null>(null);
+  const [lastExternalLink, setLastExternalLink] = useState<{ label: string; url: string } | null>(null);
   const [feedback, setFeedback] = useState<{
     ok: boolean;
     message: string;
@@ -76,6 +77,7 @@ export function InvoiceShareModal({
     if (!open) return;
     setFeedback(null);
     setPreparedPath(null);
+    setLastExternalLink(null);
 
     if (initialData) {
       setData(initialData);
@@ -123,6 +125,8 @@ export function InvoiceShareModal({
     ? `پیش‌فاکتور شماره ${formatDocumentNumber(data.number)} — ${data.companyName}`
     : `پیش‌فاکتور ${formatDocumentNumber(documentNumber)}`;
 
+  const isDesktop = typeof window !== 'undefined' && Boolean(window.pishfactorDesktop?.isDesktop);
+
   const ensurePdfPrepared = async (downloadInBrowserIfNoDesktop: boolean) => {
     const res = await prepareSharePdfFile(quotationId, documentNumber, paperSize);
     if (!res.ok || !res.bytes || !res.fileName) {
@@ -131,7 +135,7 @@ export function InvoiceShareModal({
     }
     if (res.filePath) {
       setPreparedPath(res.filePath);
-    } else if (downloadInBrowserIfNoDesktop) {
+    } else if (downloadInBrowserIfNoDesktop && !isDesktop) {
       triggerBrowserPdfDownload(res.bytes, res.fileName);
     }
     return res;
@@ -149,6 +153,7 @@ export function InvoiceShareModal({
 
   const handlePrepareOnly = async () => {
     setFeedback(null);
+    setLastExternalLink(null);
     setBusyAction('prepare');
     try {
       const prepared = await ensurePdfPrepared(true);
@@ -157,9 +162,16 @@ export function InvoiceShareModal({
           ok: true,
           message: prepared.filePath
             ? `فایل PDF (${paperSize}) برای ارسال آماده شد و در پوشه خروجی ذخیره گردید.`
-            : `فایل PDF (${paperSize}) دانلود شد و آماده پیوست در پیام‌رسان است.`,
+            : prepared.error
+              ? `فایل PDF (${paperSize}) آماده شد (${prepared.error}).`
+              : `فایل PDF (${paperSize}) دانلود شد و آماده پیوست در پیام‌رسان است.`,
         });
       }
+    } catch (err) {
+      setFeedback({
+        ok: false,
+        message: err instanceof Error ? err.message : 'آماده‌سازی فایل PDF با خطا مواجه شد.',
+      });
     } finally {
       setBusyAction(null);
     }
@@ -167,10 +179,11 @@ export function InvoiceShareModal({
 
   const handleMessengerShare = async (channel: 'whatsapp' | 'telegram' | 'telegram-direct' | 'bale') => {
     setFeedback(null);
+    setLastExternalLink(null);
     setBusyAction(channel);
     try {
-      await copyTextToClipboard(messageText);
-      const prepared = await ensurePdfPrepared(true);
+      await copyTextToClipboard(messageText).catch(() => false);
+      const prepared = await ensurePdfPrepared(true).catch(() => null);
 
       let targetUrl = '';
       if (channel === 'whatsapp') {
@@ -183,15 +196,6 @@ export function InvoiceShareModal({
         targetUrl = buildBaleUrl();
       }
 
-      const opened = await openExternalShareUrl(targetUrl);
-      if (!opened) {
-        setFeedback({
-          ok: false,
-          message: 'باز کردن برنامه یا لینک پیام‌رسان با خطا مواجه شد.',
-        });
-        return;
-      }
-
       const channelTitle =
         channel === 'whatsapp'
           ? 'واتساپ'
@@ -199,11 +203,29 @@ export function InvoiceShareModal({
             ? 'بله'
             : 'تلگرام';
 
+      const opened = await openExternalShareUrl(targetUrl);
+      setLastExternalLink({ label: `باز کردن ${channelTitle}`, url: targetUrl });
+
+      if (!opened) {
+        setFeedback({
+          ok: false,
+          message: `باز کردن خودکار ${channelTitle} انجام نشد. متن پیش‌فاکتور کپی شده است؛ از دکمه زیر برای باز کردن لینک استفاده کنید.`,
+        });
+        return;
+      }
+
       setFeedback({
         ok: true,
         message: prepared?.filePath
           ? `${channelTitle} باز شد، متن پیش‌فاکتور کپی شد و فایل PDF آماده پیوست است (از دکمه «نمایش فایل در پوشه» می‌توانید فایل را بکشید و رها کنید).`
-          : `${channelTitle} باز شد و متن پیش‌فاکتور کپی شد. فایل PDF نیز دانلود شد تا در گفتگو پیوست کنید.`,
+          : prepared
+            ? `${channelTitle} باز شد و متن پیش‌فاکتور کپی شد. فایل PDF نیز آماده شد تا در گفتگو پیوست کنید.`
+            : `${channelTitle} باز شد و متن پیش‌فاکتور کپی شد. برای پیوست فایل، می‌توانید دکمه «آماده‌سازی PDF» را نیز بزنید.`,
+      });
+    } catch (err) {
+      setFeedback({
+        ok: false,
+        message: err instanceof Error ? err.message : 'اشتراک‌گذاری در پیام‌رسان با خطا مواجه شد.',
       });
     } finally {
       setBusyAction(null);
@@ -212,6 +234,7 @@ export function InvoiceShareModal({
 
   const handleSystemFileShare = async () => {
     setFeedback(null);
+    setLastExternalLink(null);
     setBusyAction('system');
     try {
       const prepared = await ensurePdfPrepared(false);
@@ -232,6 +255,11 @@ export function InvoiceShareModal({
       } else if (res.ok) {
         setFeedback({ ok: true, message: 'فایل PDF با موفقیت به برنامه انتخابی ارسال شد.' });
       }
+    } catch (err) {
+      setFeedback({
+        ok: false,
+        message: err instanceof Error ? err.message : 'اشتراک‌گذاری سیستمی فایل انجام نشد.',
+      });
     } finally {
       setBusyAction(null);
     }
@@ -239,6 +267,7 @@ export function InvoiceShareModal({
 
   const handleSendDirectEmail = async () => {
     setFeedback(null);
+    setLastExternalLink(null);
     if (!email.trim()) {
       setFeedback({ ok: false, message: 'لطفاً آدرس ایمیل گیرنده را وارد کنید.' });
       return;
@@ -271,16 +300,22 @@ export function InvoiceShareModal({
 
   const handleMailtoClient = async () => {
     setFeedback(null);
+    setLastExternalLink(null);
     setBusyAction('mailto');
     try {
-      const prepared = await ensurePdfPrepared(true);
+      const prepared = await ensurePdfPrepared(true).catch(() => null);
       const url = buildMailtoUrl(email, emailSubject, messageText);
       await openExternalShareUrl(url);
       setFeedback({
         ok: true,
         message: prepared?.filePath
           ? 'برنامه ایمیل سیستم با متن پیش‌فاکتور باز شد و فایل PDF برای پیوست آماده است.'
-          : 'برنامه ایمیل سیستم باز شد و فایل PDF دانلود گردید تا در ایمیل پیوست کنید.',
+          : 'برنامه ایمیل سیستم باز شد و می‌توانید فایل PDF را در آن پیوست کنید.',
+      });
+    } catch (err) {
+      setFeedback({
+        ok: false,
+        message: err instanceof Error ? err.message : 'باز کردن برنامه ایمیل با خطا مواجه شد.',
       });
     } finally {
       setBusyAction(null);
@@ -289,7 +324,6 @@ export function InvoiceShareModal({
 
   const showNativeShare = canUseNativeFileShare();
   const telegramDirectUrl = buildTelegramDirectUrl(phone);
-  const isDesktop = typeof window !== 'undefined' && Boolean(window.pishfactorDesktop?.isDesktop);
 
   return (
     <Modal open={open} onClose={onClose} title="اشتراک‌گذاری و ارسال پیش‌فاکتور">
@@ -524,6 +558,18 @@ export function InvoiceShareModal({
                 }`}
               >
                 <p>{feedback.message}</p>
+                {lastExternalLink && (
+                  <p className="mt-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openExternalShareUrl(lastExternalLink.url)}
+                      className="inline-flex items-center gap-1 font-semibold underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      {lastExternalLink.label}
+                    </button>
+                  </p>
+                )}
                 {feedback.needsSmtpConfig && (
                   <p className="mt-1">
                     <Link

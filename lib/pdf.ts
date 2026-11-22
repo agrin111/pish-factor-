@@ -119,8 +119,9 @@ export async function renderQuotationPdf(
 
   const chunks: Buffer[] = [];
   doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-  const finished = new Promise<Buffer>((resolve) => {
+  const finished = new Promise<Buffer>((resolve, reject) => {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
   });
 
   doc.registerFont('fa', fontPath('Vazirmatn-Regular.ttf'));
@@ -159,7 +160,7 @@ export async function renderQuotationPdf(
       `${letterhead.companyName} — ${letterhead.phone ?? 'تلفن ثبت نشده'} — ${letterhead.address ?? 'نشانی ثبت نشده'}`,
       MARGIN,
       y,
-      { width: CONTENT_W, align: 'right' },
+      { width: CONTENT_W, align: 'right', height: isA5 ? 11 : 14, ellipsis: true },
     );
   };
 

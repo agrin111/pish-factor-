@@ -38,16 +38,35 @@ export async function printCurrentDocument(
   }
 }
 
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), ms);
+      }),
+    ]);
+  } catch {
+    return fallback;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 export async function fetchInvoicePdfBytes(
   id: string,
   documentNumber: string,
   paperSize: PaperSize,
 ): Promise<{ ok: boolean; bytes?: Uint8Array; fileName?: string; error?: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
   try {
     const response = await fetch(`/api/invoices/${encodeURIComponent(id)}/pdf?paper=${paperSize}`, {
       method: 'GET',
       credentials: 'same-origin',
       cache: 'no-store',
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -64,8 +83,13 @@ export async function fetchInvoicePdfBytes(
     const safeNumber = documentNumber.replace(/[^A-Za-z0-9._-]/g, '_') || id;
     const fileName = `invoice-${safeNumber}-${paperSize}.pdf`;
     return { ok: true, bytes, fileName };
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return { ok: false, error: 'زمان تولید فایل PDF به پایان رسید. لطفاً دوباره تلاش کنید.' };
+    }
     return { ok: false, error: 'خطا در ارتباط با سرور برای تولید فایل PDF.' };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -120,9 +144,18 @@ export async function prepareSharePdfFile(
 
   const desktop = typeof window !== 'undefined' ? window.pishfactorDesktop : undefined;
   if (desktop?.saveSharePdf) {
-    const saved = await desktop.saveSharePdf(fetched.bytes, fetched.fileName);
+    const saved = await withTimeout(
+      desktop.saveSharePdf(fetched.bytes, fetched.fileName),
+      8_000,
+      { ok: false, error: 'ذخیره خودکار فایل PDF در پوشه خروجی با تأخیر مواجه شد.' },
+    );
     if (!saved.ok) {
-      return { ok: false, error: saved.error };
+      return {
+        ok: true,
+        bytes: fetched.bytes,
+        fileName: fetched.fileName,
+        error: saved.error,
+      };
     }
     return {
       ok: true,
@@ -138,13 +171,17 @@ export async function prepareSharePdfFile(
 export async function copyTextToClipboard(text: string): Promise<boolean> {
   const desktop = typeof window !== 'undefined' ? window.pishfactorDesktop : undefined;
   if (desktop?.writeClipboard) {
-    const ok = await desktop.writeClipboard(text);
+    const ok = await withTimeout(desktop.writeClipboard(text), 2_000, false);
     if (ok) return true;
   }
   try {
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
+      const ok = await withTimeout(
+        navigator.clipboard.writeText(text).then(() => true),
+        2_000,
+        false,
+      );
+      if (ok) return true;
     }
   } catch {
     /* fallback below */
@@ -167,7 +204,7 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
 export async function openExternalShareUrl(url: string): Promise<boolean> {
   const desktop = typeof window !== 'undefined' ? window.pishfactorDesktop : undefined;
   if (desktop?.openExternal) {
-    return desktop.openExternal(url);
+    return withTimeout(desktop.openExternal(url), 4_000, true);
   }
   try {
     const anchor = document.createElement('a');
