@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useState } from 'react';
-import { Copy, Download, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Copy, Download, Eye, Pencil, Share2, Trash2 } from 'lucide-react';
 import {
   changeQuotationStatusAction,
   deleteQuotationAction,
@@ -14,6 +14,7 @@ import { Modal } from '@/components/modal';
 import { SubmitButton } from '@/components/submit-button';
 import { STATUS_LABEL, STATUSES } from '@/lib/labels';
 import { downloadInvoicePdf } from '@/lib/print-and-pdf';
+import { InvoiceShareModal } from '@/components/invoice-share-modal';
 import type { QuotationStatus } from '@prisma/client';
 
 interface Props {
@@ -28,6 +29,7 @@ export function InvoiceActions({ id, documentNumber, status, canEdit, canDelete 
   const router = useRouter();
   const [statusOpen, setStatusOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState('');
   const [statusState, statusAction] = useActionState(changeQuotationStatusAction, initialActionState);
@@ -80,6 +82,15 @@ export function InvoiceActions({ id, documentNumber, status, canEdit, canDelete 
         title="ذخیره PDF"
       >
         <Download className="h-3.5 w-3.5" />
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setShareOpen(true)}
+        className="btn btn-secondary btn-sm"
+        title="اشتراک‌گذاری در واتساپ، تلگرام، بله یا ایمیل"
+      >
+        <Share2 className="h-3.5 w-3.5" />
       </button>
 
       {canEdit && (
@@ -187,6 +198,13 @@ export function InvoiceActions({ id, documentNumber, status, canEdit, canDelete 
           </div>
         </form>
       </Modal>
+
+      <InvoiceShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        quotationId={id}
+        documentNumber={documentNumber ?? id}
+      />
     </div>
   );
 }

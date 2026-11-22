@@ -68,6 +68,12 @@ export default async function SettingsPage() {
           miscRegistrationNo: company.miscRegistrationNo,
           miscBankInfo: company.miscBankInfo,
           miscLogoDataUrl: company.miscLogoDataUrl,
+          smtpHost: company.smtpHost,
+          smtpPort: company.smtpPort ?? 587,
+          smtpSecure: company.smtpSecure,
+          smtpUser: company.smtpUser,
+          smtpFrom: company.smtpFrom,
+          hasSmtpPass: Boolean(company.smtpPass),
         }}
       />
     </div>

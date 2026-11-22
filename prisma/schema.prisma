@@ -262,6 +262,12 @@ model CompanySettings {
   miscEconomicCode     String?
   miscRegistrationNo   String?
   miscBankInfo         String?
+  smtpHost             String?
+  smtpPort             Int?     @default(587)
+  smtpSecure           Boolean  @default(false)
+  smtpUser             String?
+  smtpPass             String?
+  smtpFrom             String?
   updatedAt            DateTime @updatedAt
 
   @@map("company_settings")

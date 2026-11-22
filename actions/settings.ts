@@ -77,6 +77,12 @@ export async function saveCompanySettingsAction(
     miscRegistrationNo: formData.get('miscRegistrationNo'),
     miscBankInfo: formData.get('miscBankInfo'),
     miscLogoDataUrl: miscLogoValue || undefined,
+    smtpHost: formData.get('smtpHost'),
+    smtpPort: formData.get('smtpPort'),
+    smtpSecure: formData.get('smtpSecure') === 'on',
+    smtpUser: formData.get('smtpUser'),
+    smtpPass: formData.get('smtpPass'),
+    smtpFrom: formData.get('smtpFrom'),
   });
 
   if (!parsed.success) return zodToState(parsed.error);
@@ -84,6 +90,7 @@ export async function saveCompanySettingsAction(
   try {
     const logo = validateLogo(parsed.data.logoDataUrl);
     const miscLogo = validateLogo(parsed.data.miscLogoDataUrl);
+    const clearSmtpPass = formData.get('clearSmtpPass') === 'true';
 
     const payload = {
       companyName: parsed.data.companyName,
@@ -117,6 +124,11 @@ export async function saveCompanySettingsAction(
       miscEconomicCode: parsed.data.miscEconomicCode ?? null,
       miscRegistrationNo: parsed.data.miscRegistrationNo ?? null,
       miscBankInfo: parsed.data.miscBankInfo ?? null,
+      smtpHost: parsed.data.smtpHost ?? null,
+      smtpPort: parsed.data.smtpPort ?? 587,
+      smtpSecure: parsed.data.smtpSecure,
+      smtpUser: parsed.data.smtpUser ?? null,
+      smtpFrom: parsed.data.smtpFrom ?? null,
     };
 
     await prisma.companySettings.upsert({
@@ -124,11 +136,13 @@ export async function saveCompanySettingsAction(
       create: {
         id: 1,
         ...payload,
+        smtpPass: clearSmtpPass ? null : parsed.data.smtpPass ?? null,
         logoDataUrl: removeLogo ? null : logo,
         miscLogoDataUrl: removeMiscLogo ? null : miscLogo,
       },
       update: {
         ...payload,
+        smtpPass: clearSmtpPass ? null : parsed.data.smtpPass ?? undefined,
         logoDataUrl: removeLogo ? null : logo ?? undefined,
         miscLogoDataUrl: removeMiscLogo ? null : miscLogo ?? undefined,
       },

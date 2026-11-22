@@ -8,7 +8,7 @@
  *   ۳) سرور Next.js را روی 127.0.0.1 اجرا و پنجره برنامه را باز می‌کند.
  *   ۴) در نسخه‌های نصب‌شده، به‌روزرسانی‌های جدید را به‌صورت خودکار از GitHub بررسی و نصب می‌کند.
  */
-const { app, BrowserWindow, dialog, ipcMain, shell, Menu, session } = require('electron');
+const { app, BrowserWindow, clipboard, dialog, ipcMain, shell, Menu, session } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const http = require('node:http');
@@ -719,6 +719,58 @@ function registerIpc() {
     if (!targetPath || typeof targetPath !== 'string') return false;
     const result = await shell.openPath(targetPath);
     return result === '';
+  });
+
+  ipcMain.handle('file:save-share-pdf', async (_event, payload) => {
+    try {
+      const rawName = String(payload?.defaultFileName || 'invoice.pdf').replace(
+        /[<>:"/\\|?*\x00-\x1F]/g,
+        '_',
+      );
+      const fileName = rawName.toLowerCase().endsWith('.pdf') ? rawName : `${rawName}.pdf`;
+      const exportDir = path.join(app.getPath('documents'), 'AghrinPishFactor-Exports');
+      fs.mkdirSync(exportDir, { recursive: true });
+      const filePath = path.join(exportDir, fileName);
+      const bytes = payload?.bytes;
+      const buffer = Buffer.isBuffer(bytes)
+        ? bytes
+        : ArrayBuffer.isView(bytes)
+          ? Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+          : Buffer.from(bytes || []);
+      fs.writeFileSync(filePath, buffer);
+      return { ok: true, filePath };
+    } catch (err) {
+      log('خطا در آماده‌سازی فایل اشتراک‌گذاری:', err?.message || String(err));
+      return { ok: false, error: 'ذخیره فایل PDF برای اشتراک‌گذاری انجام نشد.' };
+    }
+  });
+
+  ipcMain.handle('file:show-in-folder', (_event, targetPath) => {
+    if (!targetPath || typeof targetPath !== 'string') return false;
+    shell.showItemInFolder(targetPath);
+    return true;
+  });
+
+  ipcMain.handle('shell:open-external', async (_event, targetUrl) => {
+    if (!targetUrl || typeof targetUrl !== 'string') return false;
+    try {
+      const parsed = new URL(targetUrl);
+      const allowedProtocols = ['https:', 'http:', 'mailto:', 'tg:', 'whatsapp:'];
+      if (!allowedProtocols.includes(parsed.protocol)) return false;
+      await shell.openExternal(targetUrl);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  ipcMain.handle('clipboard:write-text', (_event, text) => {
+    try {
+      clipboard.writeText(String(text || ''));
+      return true;
+    } catch {
+      return false;
+    }
   });
 }
 

@@ -38,11 +38,11 @@ export async function printCurrentDocument(
   }
 }
 
-export async function downloadInvoicePdf(
+export async function fetchInvoicePdfBytes(
   id: string,
   documentNumber: string,
   paperSize: PaperSize,
-): Promise<{ ok: boolean; canceled?: boolean; filePath?: string; error?: string }> {
+): Promise<{ ok: boolean; bytes?: Uint8Array; fileName?: string; error?: string }> {
   try {
     const response = await fetch(`/api/invoices/${encodeURIComponent(id)}/pdf?paper=${paperSize}`, {
       method: 'GET',
@@ -63,23 +63,158 @@ export async function downloadInvoicePdf(
 
     const safeNumber = documentNumber.replace(/[^A-Za-z0-9._-]/g, '_') || id;
     const fileName = `invoice-${safeNumber}-${paperSize}.pdf`;
-
-    const desktop = typeof window !== 'undefined' ? window.pishfactorDesktop : undefined;
-    if (desktop?.savePdf) {
-      return desktop.savePdf(bytes, fileName);
-    }
-
-    const blob = new Blob([bytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-    return { ok: true };
+    return { ok: true, bytes, fileName };
   } catch {
     return { ok: false, error: 'خطا در ارتباط با سرور برای تولید فایل PDF.' };
+  }
+}
+
+export function triggerBrowserPdfDownload(bytes: Uint8Array, fileName: string) {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  const blob = new Blob([copy.buffer], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+export async function downloadInvoicePdf(
+  id: string,
+  documentNumber: string,
+  paperSize: PaperSize,
+): Promise<{ ok: boolean; canceled?: boolean; filePath?: string; error?: string }> {
+  const fetched = await fetchInvoicePdfBytes(id, documentNumber, paperSize);
+  if (!fetched.ok || !fetched.bytes || !fetched.fileName) {
+    return { ok: false, error: fetched.error };
+  }
+
+  const desktop = typeof window !== 'undefined' ? window.pishfactorDesktop : undefined;
+  if (desktop?.savePdf) {
+    return desktop.savePdf(fetched.bytes, fetched.fileName);
+  }
+
+  triggerBrowserPdfDownload(fetched.bytes, fetched.fileName);
+  return { ok: true };
+}
+
+export async function prepareSharePdfFile(
+  id: string,
+  documentNumber: string,
+  paperSize: PaperSize,
+): Promise<{
+  ok: boolean;
+  bytes?: Uint8Array;
+  fileName?: string;
+  filePath?: string;
+  error?: string;
+}> {
+  const fetched = await fetchInvoicePdfBytes(id, documentNumber, paperSize);
+  if (!fetched.ok || !fetched.bytes || !fetched.fileName) {
+    return { ok: false, error: fetched.error };
+  }
+
+  const desktop = typeof window !== 'undefined' ? window.pishfactorDesktop : undefined;
+  if (desktop?.saveSharePdf) {
+    const saved = await desktop.saveSharePdf(fetched.bytes, fetched.fileName);
+    if (!saved.ok) {
+      return { ok: false, error: saved.error };
+    }
+    return {
+      ok: true,
+      bytes: fetched.bytes,
+      fileName: fetched.fileName,
+      filePath: saved.filePath,
+    };
+  }
+
+  return { ok: true, bytes: fetched.bytes, fileName: fetched.fileName };
+}
+
+export async function copyTextToClipboard(text: string): Promise<boolean> {
+  const desktop = typeof window !== 'undefined' ? window.pishfactorDesktop : undefined;
+  if (desktop?.writeClipboard) {
+    const ok = await desktop.writeClipboard(text);
+    if (ok) return true;
+  }
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fallback below */
+  }
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand('copy');
+    textarea.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function openExternalShareUrl(url: string): Promise<boolean> {
+  const desktop = typeof window !== 'undefined' ? window.pishfactorDesktop : undefined;
+  if (desktop?.openExternal) {
+    return desktop.openExternal(url);
+  }
+  try {
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    if (!url.startsWith('mailto:')) {
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+    }
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function canUseNativeFileShare(): boolean {
+  return (
+    typeof navigator !== 'undefined' &&
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function'
+  );
+}
+
+export async function sharePdfWithSystemSheet(
+  bytes: Uint8Array,
+  fileName: string,
+  title: string,
+  text: string,
+): Promise<{ ok: boolean; unsupported?: boolean; error?: string }> {
+  if (!canUseNativeFileShare()) {
+    return { ok: false, unsupported: true };
+  }
+  try {
+    const copy = new Uint8Array(bytes.byteLength);
+    copy.set(bytes);
+    const file = new File([copy.buffer], fileName, { type: 'application/pdf' });
+    if (!navigator.canShare({ files: [file] })) {
+      return { ok: false, unsupported: true };
+    }
+    await navigator.share({ title, text, files: [file] });
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return { ok: false };
+    }
+    return { ok: false, error: 'اشتراک‌گذاری سیستمی فایل انجام نشد.' };
   }
 }

@@ -157,6 +157,26 @@ export const companySettingsSchema = z.object({
   miscRegistrationNo: optionalText(30),
   miscBankInfo: optionalText(600),
   miscLogoDataUrl: z.preprocess(emptyToUndefined, z.string().max(4_000_000).optional()),
+  smtpHost: optionalText(160),
+  smtpPort: z.preprocess(
+    emptyToUndefined,
+    faNumber(z.coerce.number().int().min(1).max(65535)).optional(),
+  ),
+  smtpSecure: z.coerce.boolean().default(false),
+  smtpUser: optionalText(160),
+  smtpPass: z.preprocess(emptyToUndefined, z.string().max(240).optional()),
+  smtpFrom: optionalText(160),
+});
+
+export const quotationEmailSchema = z.object({
+  to: z
+    .string({ required_error: 'آدرس ایمیل گیرنده الزامی است.' })
+    .trim()
+    .email('فرمت آدرس ایمیل معتبر نیست.')
+    .max(160),
+  subject: requiredText('موضوع ایمیل', 200),
+  body: requiredText('متن ایمیل', 5000),
+  paperSize: z.enum(['A4', 'A5']).default('A4'),
 });
 
 export const letterheadUpdateSchema = z.object({

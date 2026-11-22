@@ -1,23 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Download, ExternalLink, Printer } from 'lucide-react';
+import { Download, ExternalLink, Printer, Share2 } from 'lucide-react';
 import {
   applyPrintPaperSize,
   downloadInvoicePdf,
   printCurrentDocument,
   type PaperSize,
 } from '@/lib/print-and-pdf';
+import { InvoiceShareModal } from '@/components/invoice-share-modal';
+import type { ShareQuotationData } from '@/lib/share';
 
 interface Props {
   id: string;
   documentNumber: string;
+  shareData?: ShareQuotationData;
 }
 
-export function InvoiceOutputControls({ id, documentNumber }: Props) {
+export function InvoiceOutputControls({ id, documentNumber, shareData }: Props) {
   const [paperSize, setPaperSize] = useState<PaperSize>('A4');
   const [printing, setPrinting] = useState(false);
   const [savingPdf, setSavingPdf] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [feedback, setFeedback] = useState<{
     ok: boolean;
     message: string;
@@ -114,6 +118,15 @@ export function InvoiceOutputControls({ id, documentNumber }: Props) {
           <Download className="h-4 w-4" />
           {savingPdf ? 'در حال ساخت PDF...' : `ذخیره PDF (${paperSize})`}
         </button>
+
+        <button
+          type="button"
+          className="btn btn-navy"
+          onClick={() => setShareOpen(true)}
+        >
+          <Share2 className="h-4 w-4" />
+          ارسال / اشتراک‌گذاری
+        </button>
       </div>
 
       {feedback && (
@@ -139,6 +152,15 @@ export function InvoiceOutputControls({ id, documentNumber }: Props) {
             )}
         </div>
       )}
+
+      <InvoiceShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        quotationId={id}
+        documentNumber={documentNumber}
+        initialData={shareData}
+        initialPaperSize={paperSize}
+      />
     </div>
   );
 }

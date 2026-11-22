@@ -40,6 +40,10 @@ export interface PishfactorDesktopBridge {
   printDocument?: (pageSize: 'A4' | 'A5') => Promise<DesktopPrintResult>;
   savePdf?: (bytes: Uint8Array, defaultFileName: string) => Promise<DesktopSavePdfResult>;
   openFilePath?: (filePath: string) => Promise<boolean>;
+  saveSharePdf?: (bytes: Uint8Array, defaultFileName: string) => Promise<DesktopSavePdfResult>;
+  showItemInFolder?: (filePath: string) => Promise<boolean>;
+  openExternal?: (url: string) => Promise<boolean>;
+  writeClipboard?: (text: string) => Promise<boolean>;
   onUpdateState: (listener: (state: DesktopUpdateState) => void) => () => void;
 }
 

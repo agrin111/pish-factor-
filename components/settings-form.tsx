@@ -43,6 +43,12 @@ export interface SettingsInitial {
   miscRegistrationNo: string | null;
   miscBankInfo: string | null;
   miscLogoDataUrl: string | null;
+  smtpHost: string | null;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser: string | null;
+  smtpFrom: string | null;
+  hasSmtpPass: boolean;
 }
 
 export function SettingsForm({ initial }: { initial: SettingsInitial }) {
@@ -94,6 +100,14 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
   const [miscFileError, setMiscFileError] = useState('');
   const miscFileRef = useRef<HTMLInputElement>(null);
 
+  const [smtpHost, setSmtpHost] = useState(initial.smtpHost ?? '');
+  const [smtpPort, setSmtpPort] = useState(String(initial.smtpPort ?? 587));
+  const [smtpSecure, setSmtpSecure] = useState(initial.smtpSecure);
+  const [smtpUser, setSmtpUser] = useState(initial.smtpUser ?? '');
+  const [smtpPass, setSmtpPass] = useState('');
+  const [smtpFrom, setSmtpFrom] = useState(initial.smtpFrom ?? '');
+  const [clearSmtpPass, setClearSmtpPass] = useState(false);
+
   useEffect(() => {
     setCompanyName(initial.companyName);
     setSubtitle(initial.subtitle ?? '');
@@ -131,6 +145,14 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
     setMiscBankInfo(initial.miscBankInfo ?? '');
     setMiscLogo(initial.miscLogoDataUrl);
     setRemoveMiscLogo(false);
+
+    setSmtpHost(initial.smtpHost ?? '');
+    setSmtpPort(String(initial.smtpPort ?? 587));
+    setSmtpSecure(initial.smtpSecure);
+    setSmtpUser(initial.smtpUser ?? '');
+    setSmtpPass('');
+    setSmtpFrom(initial.smtpFrom ?? '');
+    setClearSmtpPass(false);
   }, [initial]);
 
   useEffect(() => {
@@ -715,6 +737,127 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               value={disclaimerText}
               onChange={(event) => setDisclaimerText(event.target.value)}
               placeholder="این پیش‌فاکتور تا تاریخ اعتبار اعلام‌شده معتبر است و مبالغ آن تابع نرخ روز بازار است."
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="card card-pad space-y-4">
+        <div>
+          <h2 className="section-title">تنظیمات ارسال مستقیم ایمیل (SMTP — اختیاری)</h2>
+          <p className="muted mt-0.5 text-xs">
+            با تکمیل این بخش می‌توانید پیش‌فاکتورها را همراه با فایل PDF پیوست، مستقیماً از داخل
+            برنامه ایمیل کنید (مثلاً برای جیمیل: سرور{' '}
+            <span className="numeric" dir="ltr">
+              smtp.gmail.com
+            </span>{' '}
+            پورت ۵۸۷ و رمز برنامه / App Password).
+          </p>
+        </div>
+
+        <input type="hidden" name="clearSmtpPass" value={clearSmtpPass ? 'true' : 'false'} />
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label className="label" htmlFor="smtpHost">
+              سرور SMTP
+            </label>
+            <input
+              id="smtpHost"
+              name="smtpHost"
+              className="input"
+              dir="ltr"
+              placeholder="smtp.gmail.com"
+              value={smtpHost}
+              onChange={(event) => setSmtpHost(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="smtpPort">
+              پورت
+            </label>
+            <NumberField
+              id="smtpPort"
+              name="smtpPort"
+              allowDecimal={false}
+              className="input numeric"
+              value={smtpPort}
+              onValueChange={setSmtpPort}
+            />
+          </div>
+          <div className="flex items-end">
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                name="smtpSecure"
+                checked={smtpSecure}
+                onChange={(event) => setSmtpSecure(event.target.checked)}
+                className="h-4 w-4"
+              />
+              اتصال SSL مستقیم (معمولاً برای پورت ۴۶۵)
+            </label>
+          </div>
+          <div>
+            <label className="label" htmlFor="smtpUser">
+              نام کاربری / ایمیل فرستنده
+            </label>
+            <input
+              id="smtpUser"
+              name="smtpUser"
+              className="input"
+              dir="ltr"
+              placeholder="sales@company.com"
+              value={smtpUser}
+              onChange={(event) => setSmtpUser(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="smtpPass">
+              رمز عبور SMTP / App Password
+            </label>
+            <input
+              id="smtpPass"
+              name="smtpPass"
+              type="password"
+              className="input"
+              dir="ltr"
+              autoComplete="new-password"
+              placeholder={
+                initial.hasSmtpPass && !clearSmtpPass
+                  ? 'ذخیره شده — برای تغییر مقدار جدید وارد کنید'
+                  : 'رمز ایمیل یا App Password'
+              }
+              value={smtpPass}
+              onChange={(event) => {
+                setSmtpPass(event.target.value);
+                if (event.target.value) setClearSmtpPass(false);
+              }}
+            />
+            {initial.hasSmtpPass && !clearSmtpPass && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSmtpPass('');
+                  setClearSmtpPass(true);
+                }}
+                className="mt-1 text-[11px] text-rose-700 hover:underline"
+              >
+                حذف رمز ذخیره‌شده فعلی
+              </button>
+            )}
+          </div>
+          <div>
+            <label className="label" htmlFor="smtpFrom">
+              آدرس نمایش‌داده‌شده در From (اختیاری)
+            </label>
+            <input
+              id="smtpFrom"
+              name="smtpFrom"
+              className="input"
+              dir="ltr"
+              placeholder="در صورت خالی بودن همان ایمیل کاربری استفاده می‌شود"
+              value={smtpFrom}
+              onChange={(event) => setSmtpFrom(event.target.value)}
             />
           </div>
         </div>

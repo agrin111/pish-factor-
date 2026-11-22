@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { Pencil, UserRound } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { getCompanySettings } from '@/lib/settings';
+import { getCompanySettings, resolveLetterhead } from '@/lib/settings';
 import { InvoiceDocument } from '@/components/invoice-document';
 import { InvoiceActions } from '@/components/invoice-actions';
 import { InvoiceOutputControls } from '@/components/invoice-output-controls';
@@ -38,9 +38,37 @@ export default async function InvoiceDetailPage({
   if (user.role !== 'ADMIN' && quotation.createdById !== user.id) notFound();
 
   const company = await getCompanySettings();
+  const letterhead = resolveLetterhead(company, quotation.letterheadType ?? 'MAIN');
   const shownStatus = effectiveStatus(quotation);
   const canEdit =
     user.role === 'ADMIN' || !['APPROVED', 'CANCELLED'].includes(quotation.status);
+
+  const shareData = {
+    id: quotation.id,
+    number: quotation.number,
+    issueDate: quotation.issueDate.toISOString(),
+    validUntil: quotation.validUntil.toISOString(),
+    validDays: quotation.validDays,
+    customerName: quotation.customerName,
+    customerMobile: quotation.customerMobile,
+    customerCompany: quotation.customerCompany,
+    currency: quotation.currency,
+    grandTotal: quotation.grandTotal.toString(),
+    paymentTerms: quotation.paymentTerms,
+    deliveryTerms: quotation.deliveryTerms,
+    companyName: letterhead.companyName,
+    companyPhone: letterhead.phone,
+    smtpConfigured: Boolean(company.smtpHost && company.smtpUser && company.smtpPass),
+    items: quotation.items.map((item) => ({
+      rowIndex: item.rowIndex,
+      productName: item.productName,
+      size: item.size,
+      unit: item.unit,
+      quantity: item.quantity.toString(),
+      unitPrice: item.unitPrice.toString(),
+      lineTotal: item.lineTotal.toString(),
+    })),
+  };
 
   return (
     <div className="space-y-4">
@@ -68,7 +96,11 @@ export default async function InvoiceDetailPage({
               ویرایش
             </Link>
           )}
-          <InvoiceOutputControls id={quotation.id} documentNumber={quotation.number} />
+          <InvoiceOutputControls
+            id={quotation.id}
+            documentNumber={quotation.number}
+            shareData={shareData}
+          />
         </div>
       </div>
 
