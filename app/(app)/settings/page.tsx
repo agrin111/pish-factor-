@@ -57,6 +57,18 @@ export default async function SettingsPage() {
           defaultValidDays: company.defaultValidDays,
           numberPrefix: company.numberPrefix,
           logoDataUrl: company.logoDataUrl,
+          miscCompanyName: company.miscCompanyName,
+          miscSubtitle: company.miscSubtitle,
+          miscPhone: company.miscPhone,
+          miscSecondaryPhone: company.miscSecondaryPhone,
+          miscEmail: company.miscEmail,
+          miscWebsite: company.miscWebsite,
+          miscAddress: company.miscAddress,
+          miscNationalId: company.miscNationalId,
+          miscEconomicCode: company.miscEconomicCode,
+          miscRegistrationNo: company.miscRegistrationNo,
+          miscBankInfo: company.miscBankInfo,
+          miscLogoDataUrl: company.miscLogoDataUrl,
         }}
       />
     </div>

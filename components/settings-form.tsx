@@ -31,36 +31,129 @@ export interface SettingsInitial {
   defaultValidDays: number;
   numberPrefix: string;
   logoDataUrl: string | null;
+  miscCompanyName: string | null;
+  miscSubtitle: string | null;
+  miscPhone: string | null;
+  miscSecondaryPhone: string | null;
+  miscEmail: string | null;
+  miscWebsite: string | null;
+  miscAddress: string | null;
+  miscNationalId: string | null;
+  miscEconomicCode: string | null;
+  miscRegistrationNo: string | null;
+  miscBankInfo: string | null;
+  miscLogoDataUrl: string | null;
 }
 
 export function SettingsForm({ initial }: { initial: SettingsInitial }) {
   const router = useRouter();
   const [state, formAction] = useActionState(saveCompanySettingsAction, initialActionState);
+
+  const [companyName, setCompanyName] = useState(initial.companyName);
+  const [subtitle, setSubtitle] = useState(initial.subtitle ?? '');
+  const [numberPrefix, setNumberPrefix] = useState(initial.numberPrefix);
+  const [phone, setPhone] = useState(initial.phone ?? '');
+  const [secondaryPhone, setSecondaryPhone] = useState(initial.secondaryPhone ?? '');
+  const [email, setEmail] = useState(initial.email ?? '');
+  const [website, setWebsite] = useState(initial.website ?? '');
+  const [nationalId, setNationalId] = useState(initial.nationalId ?? '');
+  const [economicCode, setEconomicCode] = useState(initial.economicCode ?? '');
+  const [registrationNo, setRegistrationNo] = useState(initial.registrationNo ?? '');
+  const [address, setAddress] = useState(initial.address ?? '');
+  const [bankInfo, setBankInfo] = useState(initial.bankInfo ?? '');
+
+  const [currency, setCurrency] = useState<'TOMAN' | 'RIAL'>(initial.currency);
+  const [defaultVatRate, setDefaultVatRate] = useState(initial.defaultVatRate);
+  const [defaultValidDays, setDefaultValidDays] = useState(String(initial.defaultValidDays));
+  const [defaultIncludeVat, setDefaultIncludeVat] = useState(initial.defaultIncludeVat);
+  const [defaultPaymentTerms, setDefaultPaymentTerms] = useState(initial.defaultPaymentTerms ?? '');
+  const [defaultDeliveryTerms, setDefaultDeliveryTerms] = useState(
+    initial.defaultDeliveryTerms ?? '',
+  );
+  const [defaultNotes, setDefaultNotes] = useState(initial.defaultNotes ?? '');
+  const [disclaimerText, setDisclaimerText] = useState(initial.disclaimerText ?? '');
+
   const [logo, setLogo] = useState<string | null>(initial.logoDataUrl);
   const [removeLogo, setRemoveLogo] = useState(false);
   const [fileError, setFileError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [miscCompanyName, setMiscCompanyName] = useState(initial.miscCompanyName ?? '');
+  const [miscSubtitle, setMiscSubtitle] = useState(initial.miscSubtitle ?? '');
+  const [miscPhone, setMiscPhone] = useState(initial.miscPhone ?? '');
+  const [miscSecondaryPhone, setMiscSecondaryPhone] = useState(initial.miscSecondaryPhone ?? '');
+  const [miscEmail, setMiscEmail] = useState(initial.miscEmail ?? '');
+  const [miscWebsite, setMiscWebsite] = useState(initial.miscWebsite ?? '');
+  const [miscNationalId, setMiscNationalId] = useState(initial.miscNationalId ?? '');
+  const [miscEconomicCode, setMiscEconomicCode] = useState(initial.miscEconomicCode ?? '');
+  const [miscRegistrationNo, setMiscRegistrationNo] = useState(initial.miscRegistrationNo ?? '');
+  const [miscAddress, setMiscAddress] = useState(initial.miscAddress ?? '');
+  const [miscBankInfo, setMiscBankInfo] = useState(initial.miscBankInfo ?? '');
+  const [miscLogo, setMiscLogo] = useState<string | null>(initial.miscLogoDataUrl);
+  const [removeMiscLogo, setRemoveMiscLogo] = useState(false);
+  const [miscFileError, setMiscFileError] = useState('');
+  const miscFileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setCompanyName(initial.companyName);
+    setSubtitle(initial.subtitle ?? '');
+    setNumberPrefix(initial.numberPrefix);
+    setPhone(initial.phone ?? '');
+    setSecondaryPhone(initial.secondaryPhone ?? '');
+    setEmail(initial.email ?? '');
+    setWebsite(initial.website ?? '');
+    setNationalId(initial.nationalId ?? '');
+    setEconomicCode(initial.economicCode ?? '');
+    setRegistrationNo(initial.registrationNo ?? '');
+    setAddress(initial.address ?? '');
+    setBankInfo(initial.bankInfo ?? '');
+    setCurrency(initial.currency);
+    setDefaultVatRate(initial.defaultVatRate);
+    setDefaultValidDays(String(initial.defaultValidDays));
+    setDefaultIncludeVat(initial.defaultIncludeVat);
+    setDefaultPaymentTerms(initial.defaultPaymentTerms ?? '');
+    setDefaultDeliveryTerms(initial.defaultDeliveryTerms ?? '');
+    setDefaultNotes(initial.defaultNotes ?? '');
+    setDisclaimerText(initial.disclaimerText ?? '');
+    setLogo(initial.logoDataUrl);
+    setRemoveLogo(false);
+
+    setMiscCompanyName(initial.miscCompanyName ?? '');
+    setMiscSubtitle(initial.miscSubtitle ?? '');
+    setMiscPhone(initial.miscPhone ?? '');
+    setMiscSecondaryPhone(initial.miscSecondaryPhone ?? '');
+    setMiscEmail(initial.miscEmail ?? '');
+    setMiscWebsite(initial.miscWebsite ?? '');
+    setMiscNationalId(initial.miscNationalId ?? '');
+    setMiscEconomicCode(initial.miscEconomicCode ?? '');
+    setMiscRegistrationNo(initial.miscRegistrationNo ?? '');
+    setMiscAddress(initial.miscAddress ?? '');
+    setMiscBankInfo(initial.miscBankInfo ?? '');
+    setMiscLogo(initial.miscLogoDataUrl);
+    setRemoveMiscLogo(false);
+  }, [initial]);
+
   useEffect(() => {
     if (state.ok) router.refresh();
   }, [state, router]);
 
-  const handleFile = (file: File | undefined) => {
-    setFileError('');
+  const handleImageFile = (
+    file: File | undefined,
+    onLoaded: (dataUrl: string) => void,
+    onError: (message: string) => void,
+  ) => {
+    onError('');
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setFileError('فقط فایل تصویری مجاز است.');
+      onError('فقط فایل تصویری مجاز است.');
       return;
     }
     if (file.size > 800_000) {
-      setFileError('حجم تصویر باید کمتر از ۸۰۰ کیلوبایت باشد.');
+      onError('حجم تصویر باید کمتر از ۸۰۰ کیلوبایت باشد.');
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => {
-      setLogo(String(reader.result));
-      setRemoveLogo(false);
-    };
+    reader.onload = () => onLoaded(String(reader.result));
     reader.readAsDataURL(file);
   };
 
@@ -68,6 +161,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="logoDataUrl" value={removeLogo ? '' : logo ?? ''} />
       <input type="hidden" name="removeLogo" value={removeLogo ? 'true' : 'false'} />
+      <input type="hidden" name="miscLogoDataUrl" value={removeMiscLogo ? '' : miscLogo ?? ''} />
+      <input type="hidden" name="removeMiscLogo" value={removeMiscLogo ? 'true' : 'false'} />
 
       {state.message && (
         <div
@@ -82,7 +177,12 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
       )}
 
       <div className="card card-pad space-y-4">
-        <h2 className="section-title">هویت شرکت و لوگو</h2>
+        <div>
+          <h2 className="section-title">سربرگ اصلی شرکت و لوگو</h2>
+          <p className="muted mt-0.5 text-xs">
+            اطلاعات رسمی که در پیش‌فاکتورهای دارای «سربرگ اصلی شرکت» و سربرگ اصلی نمایش داده می‌شود.
+          </p>
+        </div>
 
         <div className="flex flex-wrap items-center gap-4">
           <BrandLogo logoDataUrl={removeLogo ? null : logo} size="lg" />
@@ -116,7 +216,16 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               type="file"
               accept="image/png,image/jpeg,image/webp,image/gif"
               className="hidden"
-              onChange={(event) => handleFile(event.target.files?.[0])}
+              onChange={(event) =>
+                handleImageFile(
+                  event.target.files?.[0],
+                  (dataUrl) => {
+                    setLogo(dataUrl);
+                    setRemoveLogo(false);
+                  },
+                  setFileError,
+                )
+              }
             />
             <p className="field-hint">
               PNG یا JPG، حداکثر ۸۰۰ کیلوبایت. لوگو در سربرگ سند و PDF استفاده می‌شود.
@@ -134,7 +243,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               id="companyName"
               name="companyName"
               className="input"
-              defaultValue={initial.companyName}
+              value={companyName}
+              onChange={(event) => setCompanyName(event.target.value)}
               required
             />
             {state.errors?.companyName && (
@@ -145,7 +255,13 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
             <label className="label" htmlFor="subtitle">
               عنوان فرعی
             </label>
-            <input id="subtitle" name="subtitle" className="input" defaultValue={initial.subtitle ?? ''} />
+            <input
+              id="subtitle"
+              name="subtitle"
+              className="input"
+              value={subtitle}
+              onChange={(event) => setSubtitle(event.target.value)}
+            />
           </div>
           <div>
             <label className="label" htmlFor="numberPrefix">
@@ -156,16 +272,24 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               name="numberPrefix"
               className="input"
               dir="ltr"
-              defaultValue={initial.numberPrefix}
+              value={numberPrefix}
+              onChange={(event) => setNumberPrefix(event.target.value)}
               required
             />
-            <p className="field-hint">نمونه شماره: {initial.numberPrefix}-۱۴۰۵-۰۰۰۱</p>
+            <p className="field-hint">نمونه شماره: {numberPrefix || initial.numberPrefix}-۱۴۰۵-۰۰۰۱</p>
           </div>
           <div>
             <label className="label" htmlFor="phone">
               شماره تماس
             </label>
-            <input id="phone" name="phone" className="input" dir="ltr" defaultValue={initial.phone ?? ''} />
+            <input
+              id="phone"
+              name="phone"
+              className="input"
+              dir="ltr"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+            />
           </div>
           <div>
             <label className="label" htmlFor="secondaryPhone">
@@ -176,7 +300,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               name="secondaryPhone"
               className="input"
               dir="ltr"
-              defaultValue={initial.secondaryPhone ?? ''}
+              value={secondaryPhone}
+              onChange={(event) => setSecondaryPhone(event.target.value)}
             />
           </div>
           <div>
@@ -189,7 +314,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               type="email"
               className="input"
               dir="ltr"
-              defaultValue={initial.email ?? ''}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
             />
           </div>
           <div>
@@ -201,7 +327,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               name="website"
               className="input"
               dir="ltr"
-              defaultValue={initial.website ?? ''}
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
             />
           </div>
           <div>
@@ -213,7 +340,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               name="nationalId"
               className="input numeric"
               dir="ltr"
-              defaultValue={initial.nationalId ?? ''}
+              value={nationalId}
+              onChange={(event) => setNationalId(event.target.value)}
             />
           </div>
           <div>
@@ -225,7 +353,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               name="economicCode"
               className="input numeric"
               dir="ltr"
-              defaultValue={initial.economicCode ?? ''}
+              value={economicCode}
+              onChange={(event) => setEconomicCode(event.target.value)}
             />
           </div>
           <div>
@@ -237,7 +366,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               name="registrationNo"
               className="input numeric"
               dir="ltr"
-              defaultValue={initial.registrationNo ?? ''}
+              value={registrationNo}
+              onChange={(event) => setRegistrationNo(event.target.value)}
             />
           </div>
           <div className="sm:col-span-2">
@@ -248,7 +378,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               id="address"
               name="address"
               className="input"
-              defaultValue={initial.address ?? ''}
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
             />
           </div>
         </div>
@@ -262,8 +393,214 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
             name="bankInfo"
             className="textarea"
             rows={2}
-            defaultValue={initial.bankInfo ?? ''}
+            value={bankInfo}
+            onChange={(event) => setBankInfo(event.target.value)}
             placeholder="نام بانک، شماره حساب، شبا، صاحب حساب"
+          />
+        </div>
+      </div>
+
+      <div className="card card-pad space-y-4">
+        <div>
+          <h2 className="section-title">سربرگ متفرقه</h2>
+          <p className="muted mt-0.5 text-xs">
+            اطلاعات مستقل برای پیش‌فاکتورها و مکاتباتی که با «سربرگ متفرقه» صادر می‌شوند (مثلاً واحد
+            فروش متفرقه، انبار یا برند دوم).
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <BrandLogo logoDataUrl={removeMiscLogo ? null : miscLogo} size="lg" />
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => miscFileRef.current?.click()}
+              >
+                <ImagePlus className="h-3.5 w-3.5" />
+                انتخاب لوگوی متفرقه
+              </button>
+              {miscLogo && !removeMiscLogo && (
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  onClick={() => {
+                    setMiscLogo(null);
+                    setRemoveMiscLogo(true);
+                    if (miscFileRef.current) miscFileRef.current.value = '';
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  حذف لوگو
+                </button>
+              )}
+            </div>
+            <input
+              ref={miscFileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={(event) =>
+                handleImageFile(
+                  event.target.files?.[0],
+                  (dataUrl) => {
+                    setMiscLogo(dataUrl);
+                    setRemoveMiscLogo(false);
+                  },
+                  setMiscFileError,
+                )
+              }
+            />
+            <p className="field-hint">اختیاری — برای نمایش در سربرگ متفرقه پیش‌فاکتور و نامه.</p>
+            {miscFileError && <p className="field-error">{miscFileError}</p>}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label className="label" htmlFor="miscCompanyName">
+              نام / عنوان سربرگ متفرقه
+            </label>
+            <input
+              id="miscCompanyName"
+              name="miscCompanyName"
+              className="input"
+              value={miscCompanyName}
+              onChange={(event) => setMiscCompanyName(event.target.value)}
+              placeholder="مثلاً: بازرگانی / فروش آزاد"
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="miscSubtitle">
+              عنوان فرعی متفرقه
+            </label>
+            <input
+              id="miscSubtitle"
+              name="miscSubtitle"
+              className="input"
+              value={miscSubtitle}
+              onChange={(event) => setMiscSubtitle(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="miscPhone">
+              شماره تماس متفرقه
+            </label>
+            <input
+              id="miscPhone"
+              name="miscPhone"
+              className="input"
+              dir="ltr"
+              value={miscPhone}
+              onChange={(event) => setMiscPhone(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="miscSecondaryPhone">
+              شماره تماس دوم متفرقه
+            </label>
+            <input
+              id="miscSecondaryPhone"
+              name="miscSecondaryPhone"
+              className="input"
+              dir="ltr"
+              value={miscSecondaryPhone}
+              onChange={(event) => setMiscSecondaryPhone(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="miscEmail">
+              ایمیل متفرقه
+            </label>
+            <input
+              id="miscEmail"
+              name="miscEmail"
+              type="email"
+              className="input"
+              dir="ltr"
+              value={miscEmail}
+              onChange={(event) => setMiscEmail(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="miscWebsite">
+              وب‌سایت متفرقه
+            </label>
+            <input
+              id="miscWebsite"
+              name="miscWebsite"
+              className="input"
+              dir="ltr"
+              value={miscWebsite}
+              onChange={(event) => setMiscWebsite(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="miscNationalId">
+              شناسه / کد ملی متفرقه
+            </label>
+            <input
+              id="miscNationalId"
+              name="miscNationalId"
+              className="input numeric"
+              dir="ltr"
+              value={miscNationalId}
+              onChange={(event) => setMiscNationalId(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="miscEconomicCode">
+              کد اقتصادی متفرقه
+            </label>
+            <input
+              id="miscEconomicCode"
+              name="miscEconomicCode"
+              className="input numeric"
+              dir="ltr"
+              value={miscEconomicCode}
+              onChange={(event) => setMiscEconomicCode(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="miscRegistrationNo">
+              شماره ثبت متفرقه
+            </label>
+            <input
+              id="miscRegistrationNo"
+              name="miscRegistrationNo"
+              className="input numeric"
+              dir="ltr"
+              value={miscRegistrationNo}
+              onChange={(event) => setMiscRegistrationNo(event.target.value)}
+            />
+          </div>
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label className="label" htmlFor="miscAddress">
+              نشانی متفرقه
+            </label>
+            <input
+              id="miscAddress"
+              name="miscAddress"
+              className="input"
+              value={miscAddress}
+              onChange={(event) => setMiscAddress(event.target.value)}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="miscBankInfo">
+            اطلاعات بانکی متفرقه
+          </label>
+          <textarea
+            id="miscBankInfo"
+            name="miscBankInfo"
+            className="textarea"
+            rows={2}
+            value={miscBankInfo}
+            onChange={(event) => setMiscBankInfo(event.target.value)}
+            placeholder="نام بانک، شماره حساب، شماره کارت یا شبا برای سربرگ متفرقه"
           />
         </div>
       </div>
@@ -274,13 +611,14 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="label" htmlFor="currency">
-              واحد پول
+              واحد پول پیش‌فرض
             </label>
             <select
               id="currency"
               name="currency"
               className="select"
-              defaultValue={initial.currency}
+              value={currency}
+              onChange={(event) => setCurrency(event.target.value as 'TOMAN' | 'RIAL')}
             >
               <option value="TOMAN">تومان</option>
               <option value="RIAL">ریال</option>
@@ -294,7 +632,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               id="defaultVatRate"
               name="defaultVatRate"
               className="input numeric"
-              defaultValue={initial.defaultVatRate}
+              value={defaultVatRate}
+              onValueChange={setDefaultVatRate}
             />
           </div>
           <div>
@@ -306,7 +645,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               name="defaultValidDays"
               allowDecimal={false}
               className="input numeric"
-              defaultValue={String(initial.defaultValidDays)}
+              value={defaultValidDays}
+              onValueChange={setDefaultValidDays}
             />
           </div>
           <div className="flex items-end">
@@ -314,7 +654,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               <input
                 type="checkbox"
                 name="defaultIncludeVat"
-                defaultChecked={initial.defaultIncludeVat}
+                checked={defaultIncludeVat}
+                onChange={(event) => setDefaultIncludeVat(event.target.checked)}
                 className="h-4 w-4"
               />
               اعمال مالیات به‌صورت پیش‌فرض
@@ -332,7 +673,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               name="defaultPaymentTerms"
               className="textarea"
               rows={2}
-              defaultValue={initial.defaultPaymentTerms ?? ''}
+              value={defaultPaymentTerms}
+              onChange={(event) => setDefaultPaymentTerms(event.target.value)}
             />
           </div>
           <div>
@@ -344,7 +686,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               name="defaultDeliveryTerms"
               className="textarea"
               rows={2}
-              defaultValue={initial.defaultDeliveryTerms ?? ''}
+              value={defaultDeliveryTerms}
+              onChange={(event) => setDefaultDeliveryTerms(event.target.value)}
             />
           </div>
           <div>
@@ -356,7 +699,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               name="defaultNotes"
               className="textarea"
               rows={2}
-              defaultValue={initial.defaultNotes ?? ''}
+              value={defaultNotes}
+              onChange={(event) => setDefaultNotes(event.target.value)}
             />
           </div>
           <div>
@@ -368,7 +712,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
               name="disclaimerText"
               className="textarea"
               rows={2}
-              defaultValue={initial.disclaimerText ?? ''}
+              value={disclaimerText}
+              onChange={(event) => setDisclaimerText(event.target.value)}
               placeholder="این پیش‌فاکتور تا تاریخ اعتبار اعلام‌شده معتبر است و مبالغ آن تابع نرخ روز بازار است."
             />
           </div>

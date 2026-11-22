@@ -41,6 +41,11 @@ enum Currency {
   RIAL
 }
 
+enum LetterheadType {
+  MAIN
+  MISC
+}
+
 model User {
   id           String    @id @default(cuid())
   username     String    @unique
@@ -164,9 +169,10 @@ model Quotation {
   totalWeightKg   Decimal @default(0) @db.Decimal(12, 3)
   itemCount       Int     @default(0)
 
-  paymentTerms  String?
-  deliveryTerms String?
-  notes         String?
+  paymentTerms   String?
+  deliveryTerms  String?
+  notes          String?
+  letterheadType LetterheadType @default(MAIN)
 
   createdById String
   createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
@@ -244,6 +250,18 @@ model CompanySettings {
   defaultIncludeVat    Boolean  @default(false)
   defaultValidDays     Int      @default(7)
   numberPrefix         String   @default("AG")
+  miscCompanyName      String?
+  miscSubtitle         String?
+  miscLogoDataUrl      String?
+  miscPhone            String?
+  miscSecondaryPhone   String?
+  miscEmail            String?
+  miscWebsite          String?
+  miscAddress          String?
+  miscNationalId       String?
+  miscEconomicCode     String?
+  miscRegistrationNo   String?
+  miscBankInfo         String?
   updatedAt            DateTime @updatedAt
 
   @@map("company_settings")

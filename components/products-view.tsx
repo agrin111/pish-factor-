@@ -217,7 +217,13 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
                     </span>
                   </td>
                   <td>{UNIT_LABEL[product.unit]}</td>
-                  <td className="numeric">{formatCurrency(product.unitPrice, currency)}</td>
+                  <td className="numeric">
+                    {Number(product.unitPrice) > 0 ? (
+                      formatCurrency(product.unitPrice, currency)
+                    ) : (
+                      <span className="muted text-[11px]">ورود در پیش‌فاکتور</span>
+                    )}
+                  </td>
                   <td>
                     {product.isActive ? (
                       <span className="badge badge-green">فعال</span>
@@ -420,7 +426,7 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
 
             <div>
               <label className="label" htmlFor="unitPrice">
-                قیمت واحد ({currency})
+                قیمت واحد پایه ({currency} — اختیاری)
               </label>
               <NumberField
                 id="unitPrice"
@@ -428,6 +434,7 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
                 className="input numeric"
                 defaultValue={editing?.unitPrice ?? '0'}
               />
+              <p className="field-hint">قیمت هر کالا در زمان صدور هر پیش‌فاکتور وارد می‌شود.</p>
               {state.errors?.unitPrice && (
                 <p className="field-error">{state.errors.unitPrice[0]}</p>
               )}

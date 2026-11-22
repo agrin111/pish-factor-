@@ -105,6 +105,7 @@ export async function saveQuotationAction(
         paymentTerms: data.paymentTerms ?? company.defaultPaymentTerms,
         deliveryTerms: data.deliveryTerms ?? company.defaultDeliveryTerms,
         notes: data.notes ?? null,
+        letterheadType: data.letterheadType,
       };
 
       if (data.id) {
@@ -339,6 +340,7 @@ export async function duplicateQuotationAction(
           paymentTerms: source.paymentTerms,
           deliveryTerms: source.deliveryTerms,
           notes: source.notes,
+          letterheadType: source.letterheadType,
           createdById: user.id,
           items: {
             create: source.items.map((item) => ({

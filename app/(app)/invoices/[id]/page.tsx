@@ -109,6 +109,7 @@ export default async function InvoiceDetailPage({
           paymentTerms: quotation.paymentTerms,
           deliveryTerms: quotation.deliveryTerms,
           notes: quotation.notes,
+          letterheadType: quotation.letterheadType,
           createdByName: quotation.createdBy.fullName,
           items: quotation.items.map((item) => ({
             id: item.id,

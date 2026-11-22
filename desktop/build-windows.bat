@@ -20,14 +20,16 @@ if errorlevel 1 (
 
 set NEXT_TELEMETRY_DISABLED=1
 
-if not exist "node_modules\" (
-  echo [1/3] نصب وابستگی‌ها... این مرحله فقط یک بار و با اینترنت انجام می‌شود.
-  call npm ci
-  if errorlevel 1 (
-    echo [!] همگام‌سازی lockfile با npm install...
-    call npm install
-    if errorlevel 1 goto failed
-  )
+set NEED_INSTALL=0
+if not exist "node_modules\@embedded-postgres\windows-x64\" set NEED_INSTALL=1
+if not exist "node_modules\lightningcss-win32-x64-msvc\" set NEED_INSTALL=1
+if not exist "node_modules\electron-updater\" set NEED_INSTALL=1
+
+if "%NEED_INSTALL%"=="1" (
+  echo [1/3] نصب وابستگی‌ها برای ویندوز... این مرحله فقط یک بار و با اینترنت انجام می‌شود.
+  if exist "package-lock.json" del /f /q "package-lock.json" >nul 2>nul
+  call npm install --no-audit --no-fund
+  if errorlevel 1 goto failed
 ) else (
   echo [1/3] وابستگی‌ها از قبل نصب شده‌اند.
 )

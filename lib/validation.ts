@@ -110,6 +110,7 @@ export const quotationSchema = z.object({
   paymentTerms: optionalText(600),
   deliveryTerms: optionalText(600),
   notes: optionalText(1000),
+  letterheadType: z.enum(['MAIN', 'MISC']).default('MAIN'),
   items: z.array(quotationItemSchema).min(1, 'حداقل یک ردیف کالا لازم است.').max(200),
 }).refine(
   (data) => {
@@ -143,6 +144,34 @@ export const companySettingsSchema = z.object({
   defaultIncludeVat: z.coerce.boolean().default(false),
   defaultValidDays: faNumber(z.coerce.number().int().min(0).max(365)).default(7),
   numberPrefix: requiredText('پیش‌شماره شماره‌گذاری', 12),
+  logoDataUrl: z.preprocess(emptyToUndefined, z.string().max(4_000_000).optional()),
+  miscCompanyName: optionalText(160),
+  miscSubtitle: optionalText(160),
+  miscPhone: optionalText(60),
+  miscSecondaryPhone: optionalText(60),
+  miscEmail: optionalText(120),
+  miscWebsite: optionalText(120),
+  miscAddress: optionalText(400),
+  miscNationalId: optionalText(30),
+  miscEconomicCode: optionalText(30),
+  miscRegistrationNo: optionalText(30),
+  miscBankInfo: optionalText(600),
+  miscLogoDataUrl: z.preprocess(emptyToUndefined, z.string().max(4_000_000).optional()),
+});
+
+export const letterheadUpdateSchema = z.object({
+  target: z.enum(['MAIN', 'MISC']),
+  companyName: requiredText('عنوان / نام سربرگ', 160),
+  subtitle: optionalText(160),
+  phone: optionalText(60),
+  secondaryPhone: optionalText(60),
+  email: optionalText(120),
+  website: optionalText(120),
+  address: optionalText(400),
+  nationalId: optionalText(30),
+  economicCode: optionalText(30),
+  registrationNo: optionalText(30),
+  bankInfo: optionalText(600),
   logoDataUrl: z.preprocess(emptyToUndefined, z.string().max(4_000_000).optional()),
 });
 

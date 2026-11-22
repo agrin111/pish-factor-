@@ -94,7 +94,10 @@ jobs:
           }
 
       - name: نصب وابستگی‌ها
-        run: npm ci
+        shell: pwsh
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue package-lock.json
+          npm install --no-audit --no-fund
 
       - name: ساخت برنامه Next.js
         run: npm run build

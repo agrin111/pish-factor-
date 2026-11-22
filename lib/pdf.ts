@@ -8,6 +8,7 @@ import { STATUS_LABEL, UNIT_LABEL } from '@/lib/labels';
 import { amountInWords, formatNumber } from '@/lib/money';
 import { toPersianDigits } from '@/lib/format';
 import { formatJalali, addDays } from '@/lib/jalali';
+import { resolveLetterhead } from '@/lib/settings';
 
 const bidi = bidiFactory();
 
@@ -87,12 +88,14 @@ export async function renderQuotationPdf(
   quotation: PdfQuotation,
   company: CompanySettings,
 ): Promise<Buffer> {
+  const letterhead = resolveLetterhead(company, quotation.letterheadType ?? 'MAIN');
+
   const doc = new PDFDocument({
     size: 'A4',
     margins: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN },
     info: {
       Title: `پیش‌فاکتور ${toPersianDigits(quotation.number)}`,
-      Author: company.companyName,
+      Author: letterhead.companyName,
       Subject: 'پیش‌فاکتور فروش کالا',
     },
   });
@@ -134,7 +137,7 @@ export async function renderQuotationPdf(
       .stroke();
     doc.font('fa').fontSize(7.5).fillColor(MUTED);
     text(
-      `${company.companyName} — ${company.phone ?? 'تلفن ثبت نشده'} — ${company.address ?? 'نشانی ثبت نشده'}`,
+      `${letterhead.companyName} — ${letterhead.phone ?? 'تلفن ثبت نشده'} — ${letterhead.address ?? 'نشانی ثبت نشده'}`,
       MARGIN,
       y,
       { width: CONTENT_W, align: 'right' },
@@ -152,9 +155,9 @@ export async function renderQuotationPdf(
   const logoBoxW = 66;
   const logoX = PAGE_W - MARGIN - 16 - logoBoxW;
 
-  if (company.logoDataUrl?.startsWith('data:image/')) {
+  if (letterhead.logoDataUrl?.startsWith('data:image/')) {
     try {
-      const base64 = company.logoDataUrl.split(',')[1];
+      const base64 = letterhead.logoDataUrl.split(',')[1];
       const buffer = Buffer.from(base64, 'base64');
       doc.image(buffer, logoX, headerTop + 16, { fit: [logoBoxW, 56], align: 'center' });
     } catch {
@@ -171,21 +174,24 @@ export async function renderQuotationPdf(
 
   const headerTextRight = logoX - 14;
   doc.font('faBold').fontSize(17).fillColor(NAVY);
-  text(company.companyName, MARGIN + 150, headerTop + 16, {
+  text(letterhead.companyName, MARGIN + 150, headerTop + 16, {
     width: headerTextRight - MARGIN - 150,
     align: 'right',
   });
   doc.font('fa').fontSize(8.5).fillColor(MUTED);
   text(
-    [company.subtitle, company.phone ? `تلفن: ${company.phone}` : null, company.website]
+    [letterhead.subtitle, letterhead.phone ? `تلفن: ${letterhead.phone}` : null, letterhead.website]
       .filter(Boolean)
-      .join('  |  ') || 'اطلاعات شرکت در بخش تنظیمات تکمیل نشده است.',
+      .join('  |  ') || 'اطلاعات سربرگ در بخش تنظیمات قابل ویرایش است.',
     MARGIN + 150,
     headerTop + 40,
     { width: headerTextRight - MARGIN - 150, align: 'right' },
   );
   text(
-    [company.nationalId ? `شناسه ملی: ${company.nationalId}` : null, company.economicCode ? `کد اقتصادی: ${company.economicCode}` : null]
+    [
+      letterhead.nationalId ? `شناسه ملی: ${letterhead.nationalId}` : null,
+      letterhead.economicCode ? `کد اقتصادی: ${letterhead.economicCode}` : null,
+    ]
       .filter(Boolean)
       .join('  |  '),
     MARGIN + 150,
@@ -240,10 +246,10 @@ export async function renderQuotationPdf(
   };
 
   drawInfoBox(PAGE_W - MARGIN - boxW, 'مشخصات فروشنده', [
-    ['نام شرکت', company.companyName],
-    ['شناسه ملی', company.nationalId ?? ''],
-    ['تلفن', company.phone ?? ''],
-    ['نشانی', company.address ?? ''],
+    ['نام شرکت', letterhead.companyName],
+    ['شناسه ملی', letterhead.nationalId ?? ''],
+    ['تلفن', letterhead.phone ?? ''],
+    ['نشانی', letterhead.address ?? ''],
   ]);
 
   drawInfoBox(MARGIN, 'مشخصات خریدار', [
@@ -385,7 +391,7 @@ export async function renderQuotationPdf(
   const termsText = [
     `شرایط پرداخت: ${quotation.paymentTerms || '—'}`,
     `شرایط تحویل: ${quotation.deliveryTerms || '—'}`,
-    company.bankInfo ? `اطلاعات بانکی: ${company.bankInfo}` : null,
+    letterhead.bankInfo ? `اطلاعات بانکی: ${letterhead.bankInfo}` : null,
     quotation.notes ? `توضیحات: ${quotation.notes}` : null,
   ].filter(Boolean) as string[];
 

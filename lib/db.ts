@@ -195,6 +195,18 @@ function createInitialMockStore(): MockStore {
         defaultIncludeVat: false,
         defaultValidDays: 7,
         numberPrefix: 'AG',
+        miscCompanyName: null,
+        miscSubtitle: null,
+        miscLogoDataUrl: null,
+        miscPhone: null,
+        miscSecondaryPhone: null,
+        miscEmail: null,
+        miscWebsite: null,
+        miscAddress: null,
+        miscNationalId: null,
+        miscEconomicCode: null,
+        miscRegistrationNo: null,
+        miscBankInfo: null,
         updatedAt: now,
       },
     ],
@@ -251,6 +263,16 @@ function getMockStore(): MockStore {
       try {
         const loaded = deserializeMockStore(fs.readFileSync(file, 'utf8'));
         const merged: MockStore = { ...defaults, ...loaded };
+        if (merged.companySettings.length > 0) {
+          merged.companySettings[0] = {
+            ...defaults.companySettings[0],
+            ...merged.companySettings[0],
+          };
+        }
+        merged.quotation = merged.quotation.map((q) => ({
+          letterheadType: 'MAIN',
+          ...q,
+        }));
         let addedDefaultCategory = false;
         for (const cat of defaults.productCategory) {
           if (!merged.productCategory.some((existing) => existing.name === cat.name)) {

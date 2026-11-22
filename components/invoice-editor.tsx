@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle, Plus, Save, Trash2 } from 'lucide-react';
-import type { QuotationStatus, UnitType } from '@prisma/client';
+import type { LetterheadType, QuotationStatus, UnitType } from '@prisma/client';
 import { saveQuotationAction } from '@/actions/quotations';
 import { initialActionState } from '@/lib/forms';
 import { SubmitButton } from '@/components/submit-button';
@@ -53,6 +53,7 @@ export interface EditorQuotation {
   paymentTerms: string | null;
   deliveryTerms: string | null;
   notes: string | null;
+  letterheadType: LetterheadType;
   items: {
     id: string;
     productId: string | null;
@@ -107,7 +108,7 @@ function emptyRow(): RowState {
     size: '',
     unit: 'KILOGRAM',
     quantity: '1',
-    unitPrice: '0',
+    unitPrice: '',
     weightKg: '0',
   };
 }
@@ -135,6 +136,9 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
     existing?.deliveryTerms ?? defaults.deliveryTerms ?? '',
   );
   const [notes, setNotes] = useState(existing?.notes ?? '');
+  const [letterheadType, setLetterheadType] = useState<LetterheadType>(
+    existing?.letterheadType ?? 'MAIN',
+  );
 
   const [rows, setRows] = useState<RowState[]>(
     existing
@@ -201,7 +205,6 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
       specs: product.specs ?? '',
       size: product.size ?? '',
       unit: product.unit,
-      unitPrice: product.unitPrice,
       weightKg: product.weightPerUnitKg,
     });
   };
@@ -220,6 +223,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
     paymentTerms,
     deliveryTerms,
     notes,
+    letterheadType,
     items: rows.map((row, index) => ({
       rowIndex: index + 1,
       productId: row.productId || undefined,
@@ -252,6 +256,10 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
     }
     if (rows.some((row) => toNumber(row.quantity) <= 0)) {
       setClientError('مقدار هر ردیف باید بزرگ‌تر از صفر باشد.');
+      return;
+    }
+    if (rows.some((row) => row.unitPrice.trim() === '')) {
+      setClientError('قیمت واحد هر کالا را در پیش‌فاکتور وارد کنید.');
       return;
     }
 
@@ -424,6 +432,21 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
         </div>
 
         <div>
+          <label className="label" htmlFor="letterheadType">
+            نوع سربرگ پیش‌فاکتور
+          </label>
+          <select
+            id="letterheadType"
+            className="select"
+            value={letterheadType}
+            onChange={(event) => setLetterheadType(event.target.value as LetterheadType)}
+          >
+            <option value="MAIN">سربرگ اصلی شرکت</option>
+            <option value="MISC">سربرگ متفرقه</option>
+          </select>
+        </div>
+
+        <div>
           <label className="label" htmlFor="vatRate">
             درصد مالیات
           </label>
@@ -471,13 +494,21 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                 <th style={{ width: 90 }}>سایز</th>
                 <th style={{ width: 96 }}>واحد</th>
                 <th style={{ width: 90 }}>مقدار</th>
-                <th style={{ width: 120 }}>قیمت واحد</th>
+                <th style={{ width: 150 }}>
+                  قیمت واحد ({currency === 'RIAL' ? 'ریال' : 'تومان'}) *
+                </th>
                 <th style={{ width: 110 }}>مبلغ ردیف</th>
                 <th style={{ width: 46 }} />
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, index) => (
+              {rows.map((row, index) => {
+                const catalogProduct = row.productId
+                  ? products.find((item) => item.id === row.productId)
+                  : undefined;
+                const catalogPrice = catalogProduct ? toNumber(catalogProduct.unitPrice) : 0;
+
+                return (
                 <tr key={row.key}>
                   <td className="numeric text-center">{formatNumber(index + 1, 0)}</td>
                   <td>
@@ -543,8 +574,20 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                     <NumberField
                       className="input numeric !py-1.5 text-xs"
                       value={row.unitPrice}
+                      placeholder="ورود قیمت واحد"
                       onValueChange={(next) => updateRow(row.key, { unitPrice: next })}
                     />
+                    {catalogPrice > 0 && row.unitPrice !== catalogProduct?.unitPrice && (
+                      <button
+                        type="button"
+                        className="numeric mt-0.5 block text-[10px] text-[#347C65] hover:underline"
+                        onClick={() =>
+                          updateRow(row.key, { unitPrice: catalogProduct?.unitPrice ?? '' })
+                        }
+                      >
+                        قیمت پایه: {formatNumber(catalogPrice, 0)}
+                      </button>
+                    )}
                   </td>
                   <td className="numeric font-semibold">
                     {formatNumber(totals.lines[index] ?? 0, 0)}
@@ -567,7 +610,8 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

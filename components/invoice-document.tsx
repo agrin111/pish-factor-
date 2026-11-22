@@ -6,7 +6,8 @@ import {
 } from '@/lib/format';
 import { formatJalali } from '@/lib/jalali';
 import { STATUS_LABEL, UNIT_LABEL } from '@/lib/labels';
-import type { CompanySettings, QuotationStatus, UnitType } from '@prisma/client';
+import { resolveLetterhead } from '@/lib/settings';
+import type { CompanySettings, LetterheadType, QuotationStatus, UnitType } from '@prisma/client';
 
 export interface DocumentQuotation {
   id: string;
@@ -30,6 +31,7 @@ export interface DocumentQuotation {
   paymentTerms: string | null;
   deliveryTerms: string | null;
   notes: string | null;
+  letterheadType?: LetterheadType;
   createdByName: string;
   items: {
     id: string;
@@ -51,12 +53,15 @@ interface Props {
 
 export function InvoiceDocument({ quotation, company }: Props) {
   const currency = quotation.currency === 'RIAL' ? 'ریال' : 'تومان';
+  const letterhead = resolveLetterhead(company, quotation.letterheadType ?? 'MAIN');
+  const isMisc = letterhead.type === 'MISC';
   const missingInfo =
-    !company.phone ||
-    !company.address ||
-    !company.nationalId ||
-    !company.economicCode ||
-    !company.logoDataUrl;
+    !isMisc &&
+    (!letterhead.phone ||
+      !letterhead.address ||
+      !letterhead.nationalId ||
+      !letterhead.economicCode ||
+      !letterhead.logoDataUrl);
 
   return (
     <div className="space-y-3">
@@ -71,10 +76,10 @@ export function InvoiceDocument({ quotation, company }: Props) {
         {/* سربرگ */}
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border-2 border-[#172535] p-4">
           <div className="flex items-center gap-3">
-            {company.logoDataUrl ? (
+            {letterhead.logoDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={company.logoDataUrl}
+                src={letterhead.logoDataUrl}
                 alt="لوگوی شرکت"
                 className="h-12 w-12 rounded-lg object-contain"
               />
@@ -84,10 +89,10 @@ export function InvoiceDocument({ quotation, company }: Props) {
               </span>
             )}
             <div>
-              <div className="text-base font-extrabold">{company.companyName}</div>
-              {company.subtitle && <div className="muted text-[10px]">{company.subtitle}</div>}
+              <div className="text-base font-extrabold">{letterhead.companyName}</div>
+              {letterhead.subtitle && <div className="muted text-[10px]">{letterhead.subtitle}</div>}
               <div className="muted numeric mt-0.5 text-[10px]">
-                {[company.phone, company.website].filter(Boolean).join(' | ') || 'اطلاعات تماس ثبت نشده'}
+                {[letterhead.phone, letterhead.website].filter(Boolean).join(' | ') || 'اطلاعات تماس ثبت نشده'}
               </div>
             </div>
           </div>
@@ -112,13 +117,15 @@ export function InvoiceDocument({ quotation, company }: Props) {
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-[#D7DEE5] p-3">
             <div className="mb-1.5 border-b border-[#D7DEE5] pb-1.5 font-bold">مشخصات فروشنده</div>
-            <div>نام شرکت: {company.companyName}</div>
-            <div className="numeric">
-              شناسه ملی: {company.nationalId || 'تنظیم نشده'} · کد اقتصادی:{' '}
-              {company.economicCode || 'تنظیم نشده'}
-            </div>
-            <div className="numeric">تلفن: {company.phone || 'تنظیم نشده'}</div>
-            <div>نشانی: {company.address || 'تنظیم نشده'}</div>
+            <div>نام شرکت / فروشنده: {letterhead.companyName}</div>
+            {(letterhead.nationalId || letterhead.economicCode || !isMisc) && (
+              <div className="numeric">
+                شناسه ملی: {letterhead.nationalId || 'تنظیم نشده'} · کد اقتصادی:{' '}
+                {letterhead.economicCode || 'تنظیم نشده'}
+              </div>
+            )}
+            <div className="numeric">تلفن: {letterhead.phone || 'تنظیم نشده'}</div>
+            <div>نشانی: {letterhead.address || 'تنظیم نشده'}</div>
           </div>
 
           <div className="rounded-lg border border-[#D7DEE5] p-3">
@@ -186,7 +193,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
             <div className="mb-1 font-bold">شرایط پرداخت، تحویل و توضیحات</div>
             <div>شرایط پرداخت: {quotation.paymentTerms || '—'}</div>
             <div>شرایط تحویل: {quotation.deliveryTerms || '—'}</div>
-            {company.bankInfo && <div>اطلاعات بانکی: {company.bankInfo}</div>}
+            {letterhead.bankInfo && <div>اطلاعات بانکی: {letterhead.bankInfo}</div>}
             {quotation.notes && <div>توضیحات: {quotation.notes}</div>}
           </div>
 
@@ -238,9 +245,9 @@ export function InvoiceDocument({ quotation, company }: Props) {
         </div>
 
         <div className="muted mt-3 border-t border-[#D7DEE5] pt-2 text-[9px]">
-          {company.companyName}
-          {company.phone ? ` — ${company.phone}` : ''}
-          {company.address ? ` — ${company.address}` : ''} · واحد پول: {currency}
+          {letterhead.companyName}
+          {letterhead.phone ? ` — ${letterhead.phone}` : ''}
+          {letterhead.address ? ` — ${letterhead.address}` : ''} · واحد پول: {currency}
         </div>
       </div>
     </div>

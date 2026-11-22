@@ -76,6 +76,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
         paymentTerms: quotation.paymentTerms,
         deliveryTerms: quotation.deliveryTerms,
         notes: quotation.notes,
+        letterheadType: quotation.letterheadType,
         items: quotation.items.map((item) => ({
           id: item.id,
           productId: item.productId,
