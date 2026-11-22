@@ -42,6 +42,8 @@ let shutdownPromise = null;
 let isQuitting = false;
 let shutdownCompleted = false;
 let isInstallingUpdate = false;
+let isDownloadingUpdate = false;
+let activePgDataDir = null;
 
 let updateState = {
   status: isDev ? 'unsupported' : 'idle',
@@ -276,6 +278,7 @@ async function seedFirstRun(client) {
 async function startDatabase(config) {
   const { default: EmbeddedPostgres } = await import('embedded-postgres');
   const pgData = resolvePgDataDir();
+  activePgDataDir = pgData;
   const port = await findFreePort();
 
   // پاک‌سازی پوشه ناقص از اجرای ناموفق قبلی
@@ -460,14 +463,41 @@ function shutdown() {
     const pg = postgres;
     postgres = null;
     if (pg) {
+      let stoppedCleanly = false;
       try {
         await Promise.race([
-          pg.stop(),
+          pg.stop().then(() => {
+            stoppedCleanly = true;
+          }),
           new Promise((resolve) => setTimeout(resolve, 5000)),
         ]);
       } catch {
         /* ignore */
       }
+      if (!stoppedCleanly && process.platform === 'win32' && activePgDataDir) {
+        try {
+          const pidFile = path.join(activePgDataDir, 'postmaster.pid');
+          if (fs.existsSync(pidFile)) {
+            const firstLine = fs.readFileSync(pidFile, 'utf8').split(/\r?\n/)[0]?.trim();
+            if (firstLine && /^\d+$/.test(firstLine)) {
+              await new Promise((resolve) => {
+                const killer = spawn('taskkill', ['/pid', firstLine, '/T', '/F'], {
+                  windowsHide: true,
+                  stdio: 'ignore',
+                });
+                killer.once('close', resolve);
+                killer.once('error', resolve);
+                setTimeout(resolve, 1500);
+              });
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    if (process.platform === 'win32') {
+      await new Promise((resolve) => setTimeout(resolve, 350));
     }
     shutdownCompleted = true;
   })();
@@ -482,7 +512,8 @@ async function installDownloadedUpdate() {
   try {
     await shutdown();
     setImmediate(() => {
-      autoUpdater.quitAndInstall(false, true);
+      // نصب بی‌صدا (/S) + اجرای خودکار نسخه جدید پس از پایان نصب (--force-run)
+      autoUpdater.quitAndInstall(true, true);
     });
   } catch (err) {
     isInstallingUpdate = false;
@@ -532,10 +563,33 @@ function initAutoUpdater() {
     error: (...args) => log('updater-err:', ...args),
     debug: () => {},
   };
-  autoUpdater.autoDownload = !isPortable;
+  autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = !isPortable;
   autoUpdater.allowDowngrade = false;
   autoUpdater.fullChangelog = false;
+
+  const startUpdateDownload = async (versionLabel) => {
+    if (isPortable || isDownloadingUpdate || updateState.status === 'downloaded') return;
+    isDownloadingUpdate = true;
+    setUpdateState({
+      status: 'downloading',
+      availableVersion: versionLabel ?? updateState.availableVersion,
+      percent: 0,
+      message: versionLabel
+        ? `در حال دریافت نسخه ${versionLabel}...`
+        : 'در حال دریافت به‌روزرسانی...',
+    });
+    try {
+      await autoUpdater.downloadUpdate();
+    } catch (err) {
+      isDownloadingUpdate = false;
+      log('خطا در دریافت به‌روزرسانی:', err?.message || String(err));
+      setUpdateState({
+        status: 'error',
+        message: formatUpdaterError(err),
+      });
+    }
+  };
 
   autoUpdater.on('checking-for-update', () => {
     setUpdateState({ status: 'checking', message: undefined });
@@ -544,22 +598,30 @@ function initAutoUpdater() {
   autoUpdater.on('update-available', (info) => {
     log('نسخه جدید یافت شد:', info.version);
     if (isPortable) {
+      manualCheckRequested = false;
       setUpdateState({
         status: 'portable-available',
         availableVersion: info.version,
         message: `نسخه ${info.version} روی گیت‌هاب منتشر شده است.`,
       });
-    } else {
-      setUpdateState({
-        status: 'available',
-        availableVersion: info.version,
-        percent: 0,
-        message: `در حال دریافت نسخه ${info.version}...`,
-      });
+      return;
+    }
+
+    const triggerNow = manualCheckRequested;
+    manualCheckRequested = false;
+    setUpdateState({
+      status: 'available',
+      availableVersion: info.version,
+      percent: 0,
+      message: `نسخه جدید ${info.version} آماده دریافت است.`,
+    });
+    if (triggerNow) {
+      void startUpdateDownload(info.version);
     }
   });
 
   autoUpdater.on('update-not-available', () => {
+    isDownloadingUpdate = false;
     setUpdateState({
       status: manualCheckRequested ? 'up-to-date' : 'idle',
       message: manualCheckRequested ? 'شما از آخرین نسخه استفاده می‌کنید.' : undefined,
@@ -580,6 +642,7 @@ function initAutoUpdater() {
   });
 
   autoUpdater.on('update-downloaded', async (info) => {
+    isDownloadingUpdate = false;
     log('به‌روزرسانی آماده نصب است:', info.version);
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setProgressBar(-1);
@@ -596,9 +659,9 @@ function initAutoUpdater() {
     const { response } = await dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'به‌روزرسانی جدید آماده است',
-      message: `نسخه جدید Aghrin PishFactor (${info.version}) از گیت‌هاب دریافت شد.`,
+      message: `نسخه جدید Aghrin PishFactor (${info.version}) دریافت شد.`,
       detail:
-        'تمام اطلاعات شما (پیش‌فاکتورها، مشتریان و تنظیمات) حفظ می‌شود.\nآیا مایلید اکنون نصب و برنامه مجدداً راه‌اندازی شود؟',
+        'تمام اطلاعات شما (پیش‌فاکتورها، مشتریان و تنظیمات) حفظ می‌شود.\nآیا مایلید اکنون به‌صورت خودکار نصب و نسخه جدید اجرا شود؟',
       buttons: ['نصب و راه‌اندازی مجدد', 'بعداً (هنگام خروج)'],
       defaultId: 0,
       cancelId: 1,
@@ -610,6 +673,7 @@ function initAutoUpdater() {
   });
 
   autoUpdater.on('error', (err) => {
+    isDownloadingUpdate = false;
     log('خطا در بررسی به‌روزرسانی:', err?.message || String(err));
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setProgressBar(-1);
@@ -625,8 +689,11 @@ function initAutoUpdater() {
     manualCheckRequested = false;
   });
 
+  autoUpdater._startUpdateDownload = startUpdateDownload;
+
   const runBackgroundCheck = () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (isDownloadingUpdate || updateState.status === 'downloaded') return;
     manualCheckRequested = false;
     autoUpdater.checkForUpdates().catch((err) => {
       log('خطای بررسی خودکار به‌روزرسانی:', err?.message || String(err));
@@ -649,6 +716,9 @@ function registerIpc() {
       });
       return updateState;
     }
+    if (isDownloadingUpdate || updateState.status === 'downloaded') {
+      return updateState;
+    }
     manualCheckRequested = true;
     try {
       await autoUpdater.checkForUpdates();
@@ -663,12 +733,22 @@ function registerIpc() {
     return updateState;
   });
 
+  ipcMain.handle('updater:download', async () => {
+    if (isDev || !autoUpdater) return updateState;
+    if (typeof autoUpdater._startUpdateDownload === 'function') {
+      await autoUpdater._startUpdateDownload(updateState.availableVersion);
+    }
+    return updateState;
+  });
+
   ipcMain.handle('updater:install', async () => {
     await installDownloadedUpdate();
   });
 
   ipcMain.handle('updater:open-releases', async () => {
-    await shell.openExternal(GITHUB_RELEASES_URL);
+    setImmediate(() => {
+      shell.openExternal(GITHUB_RELEASES_URL).catch(() => {});
+    });
   });
 
   ipcMain.handle('print:document', async (_event, options) => {
@@ -917,16 +997,20 @@ function createMainWindow(url) {
   });
 }
 
-app.requestSingleInstanceLock();
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
-app.on('second-instance', () => {
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.focus();
-  }
-});
+if (!gotSingleInstanceLock) {
+  shutdownCompleted = true;
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
 
-app.whenReady().then(async () => {
+  app.whenReady().then(async () => {
   logStream = fs.createWriteStream(path.join(dataDir(), 'desktop.log'), { flags: 'a' });
 
   // پنجره رابط کاربری فقط مجاز به درخواست به سرور محلی 127.0.0.1 است؛
@@ -979,7 +1063,8 @@ app.whenReady().then(async () => {
     );
     app.quit();
   }
-});
+  });
+}
 
 app.on('window-all-closed', () => {
   app.quit();

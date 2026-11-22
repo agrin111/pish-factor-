@@ -203,6 +203,15 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
                     <Download className="h-3 w-3" />
                     <span>نصب و راه‌اندازی مجدد</span>
                   </button>
+                ) : desktopState.status === 'available' ? (
+                  <button
+                    type="button"
+                    onClick={() => window.pishfactorDesktop?.downloadUpdate?.()}
+                    className="inline-flex items-center gap-1 rounded-lg bg-[#5fb79b] px-2.5 py-1 text-[11px] font-semibold text-[#172535] transition hover:bg-[#73c5aa]"
+                  >
+                    <Download className="h-3 w-3" />
+                    <span>دریافت و نصب</span>
+                  </button>
                 ) : desktopState.status === 'portable-available' ? (
                   <button
                     type="button"

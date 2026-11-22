@@ -35,6 +35,7 @@ export interface PishfactorDesktopBridge {
   isDesktop: true;
   getUpdateState: () => Promise<DesktopUpdateState>;
   checkForUpdates: () => Promise<DesktopUpdateState>;
+  downloadUpdate?: () => Promise<DesktopUpdateState>;
   installUpdate: () => Promise<void>;
   openReleasesPage: () => Promise<void>;
   printDocument?: (pageSize: 'A4' | 'A5') => Promise<DesktopPrintResult>;

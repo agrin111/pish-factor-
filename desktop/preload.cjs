@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('pishfactorDesktop', {
   isDesktop: true,
   getUpdateState: () => ipcRenderer.invoke('updater:state'),
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  downloadUpdate: () => ipcRenderer.invoke('updater:download'),
   installUpdate: () => ipcRenderer.invoke('updater:install'),
   openReleasesPage: () => ipcRenderer.invoke('updater:open-releases'),
   printDocument: (pageSize) => ipcRenderer.invoke('print:document', { pageSize }),
