@@ -44,7 +44,7 @@ interface AppShellProps {
 const NAV = [
   { href: '/dashboard', label: 'داشبورد', icon: LayoutDashboard },
   { href: '/invoices', label: 'آرشیو پیش‌فاکتورها', icon: FileText, count: 'invoices' as const },
-  { href: '/letterhead', label: 'سربرگ متفرقه', icon: FilePenLine },
+  { href: '/letterhead', label: 'انتخاب سربرگ', icon: FilePenLine },
   { href: '/customers', label: 'مدیریت مشتریان', icon: Users, count: 'customers' as const },
   { href: '/products', label: 'مدیریت کالا و قیمت', icon: Package, count: 'products' as const },
   { href: '/reports', label: 'گزارش‌های فروش', icon: BarChart3 },
@@ -55,7 +55,7 @@ const NAV = [
 const TITLES: Record<string, string> = {
   '/dashboard': 'داشبورد',
   '/invoices': 'آرشیو پیش‌فاکتورها',
-  '/letterhead': 'سربرگ متفرقه',
+  '/letterhead': 'انتخاب سربرگ',
   '/customers': 'مدیریت مشتریان',
   '/products': 'مدیریت کالا و قیمت',
   '/reports': 'گزارش‌های فروش',
