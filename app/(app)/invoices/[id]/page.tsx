@@ -99,6 +99,8 @@ export default async function InvoiceDetailPage({
           <InvoiceOutputControls
             id={quotation.id}
             documentNumber={quotation.number}
+            customerName={quotation.customerName}
+            issueDate={quotation.issueDate.toISOString()}
             shareData={shareData}
           />
         </div>
@@ -108,6 +110,8 @@ export default async function InvoiceDetailPage({
         <InvoiceActions
           id={quotation.id}
           documentNumber={quotation.number}
+          customerName={quotation.customerName}
+          issueDate={quotation.issueDate.toISOString()}
           status={quotation.status}
           canEdit={canEdit}
           canDelete={user.role === 'ADMIN'}

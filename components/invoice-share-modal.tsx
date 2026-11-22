@@ -39,6 +39,8 @@ interface Props {
   onClose: () => void;
   quotationId: string;
   documentNumber: string;
+  customerName?: string;
+  issueDate?: Date | string;
   initialData?: ShareQuotationData;
   initialPaperSize?: PaperSize;
 }
@@ -48,6 +50,8 @@ export function InvoiceShareModal({
   onClose,
   quotationId,
   documentNumber,
+  customerName,
+  issueDate,
   initialData,
   initialPaperSize = 'A4',
 }: Props) {
@@ -128,7 +132,10 @@ export function InvoiceShareModal({
   const isDesktop = typeof window !== 'undefined' && Boolean(window.pishfactorDesktop?.isDesktop);
 
   const ensurePdfPrepared = async (downloadInBrowserIfNoDesktop: boolean) => {
-    const res = await prepareSharePdfFile(quotationId, documentNumber, paperSize);
+    const res = await prepareSharePdfFile(quotationId, documentNumber, paperSize, {
+      customerName: data?.customerName ?? customerName,
+      issueDate: data?.issueDate ?? issueDate,
+    });
     if (!res.ok || !res.bytes || !res.fileName) {
       setFeedback({ ok: false, message: res.error || 'تولید فایل PDF انجام نشد.' });
       return null;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fa, renderQuotationPdf } from '@/lib/pdf';
+import { buildInvoicePdfFileName, parseContentDispositionFileName } from '@/lib/pdf-filename';
 import { jalaliToDate } from '@/lib/jalali';
 
 describe('آماده‌سازی متن فارسی برای PDF', () => {
@@ -327,5 +328,39 @@ describe('تولید فایل PDF', () => {
 
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     expect(pdf.length).toBeGreaterThan(3000);
+  });
+});
+
+describe('نام فایل PDF خروجی', () => {
+  it('نام فایل را با نام مشتری و تاریخ شمسی پیش‌فاکتور می‌سازد', () => {
+    const issueDate = jalaliToDate(1405, 8, 28);
+    expect(
+      buildInvoicePdfFileName({
+        customerName: 'شرکت فولاد آگرین',
+        issueDate,
+        documentNumber: 'AG-1405-0001',
+        paperSize: 'A4',
+      }),
+    ).toBe('شرکت فولاد آگرین - ۱۴۰۵-۰۸-۲۸.pdf');
+  });
+
+  it('کاراکترهای غیرمجاز نام فایل را پاک‌سازی و اندازه A5 را لحاظ می‌کند', () => {
+    const issueDate = jalaliToDate(1405, 9, 2);
+    expect(
+      buildInvoicePdfFileName({
+        customerName: 'آقای رضایی / پروژه: شمال',
+        issueDate,
+        paperSize: 'A5',
+      }),
+    ).toBe('آقای رضایی پروژه شمال - ۱۴۰۵-۰۹-۰۲ - A5.pdf');
+  });
+
+  it('نام فایل UTF-8 را از هدر Content-Disposition استخراج می‌کند', () => {
+    const encoded = encodeURIComponent('شرکت نمونه - ۱۴۰۵-۰۹-۰۲.pdf');
+    expect(
+      parseContentDispositionFileName(
+        `attachment; filename="invoice-AG-1405-0001-A4.pdf"; filename*=UTF-8''${encoded}`,
+      ),
+    ).toBe('شرکت نمونه - ۱۴۰۵-۰۹-۰۲.pdf');
   });
 });

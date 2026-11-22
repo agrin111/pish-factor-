@@ -20,12 +20,22 @@ import type { QuotationStatus } from '@prisma/client';
 interface Props {
   id: string;
   documentNumber?: string;
+  customerName?: string;
+  issueDate?: string;
   status: QuotationStatus;
   canEdit: boolean;
   canDelete: boolean;
 }
 
-export function InvoiceActions({ id, documentNumber, status, canEdit, canDelete }: Props) {
+export function InvoiceActions({
+  id,
+  documentNumber,
+  customerName,
+  issueDate,
+  status,
+  canEdit,
+  canDelete,
+}: Props) {
   const router = useRouter();
   const [statusOpen, setStatusOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -69,7 +79,10 @@ export function InvoiceActions({ id, documentNumber, status, canEdit, canDelete 
           setPdfError('');
           setDownloadingPdf(true);
           try {
-            const res = await downloadInvoicePdf(id, documentNumber ?? id, 'A4');
+            const res = await downloadInvoicePdf(id, documentNumber ?? id, 'A4', {
+              customerName,
+              issueDate,
+            });
             if (!res.ok && !res.canceled && res.error) {
               setPdfError(res.error);
             }
@@ -204,6 +217,8 @@ export function InvoiceActions({ id, documentNumber, status, canEdit, canDelete 
         onClose={() => setShareOpen(false)}
         quotationId={id}
         documentNumber={documentNumber ?? id}
+        customerName={customerName}
+        issueDate={issueDate}
       />
     </div>
   );

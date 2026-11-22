@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { getCompanySettings, resolveLetterhead } from '@/lib/settings';
 import { renderQuotationPdf } from '@/lib/pdf';
+import { buildInvoicePdfFileName } from '@/lib/pdf-filename';
 import { quotationEmailSchema } from '@/lib/validation';
 import { logAudit } from '@/lib/audit';
 
@@ -68,8 +69,12 @@ export async function POST(
       paperSize: parsed.data.paperSize,
     });
     const letterhead = resolveLetterhead(company, quotation.letterheadType ?? 'MAIN');
-    const asciiNumber = quotation.number.replace(/[^A-Za-z0-9._-]/g, '_') || quotation.id;
-    const fileName = `invoice-${asciiNumber}-${parsed.data.paperSize}.pdf`;
+    const fileName = buildInvoicePdfFileName({
+      customerName: quotation.customerName,
+      issueDate: quotation.issueDate,
+      documentNumber: quotation.number,
+      paperSize: parsed.data.paperSize,
+    });
 
     const port = company.smtpPort ?? 587;
     const transporter = nodemailer.createTransport({

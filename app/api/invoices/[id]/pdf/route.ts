@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { getCompanySettings } from '@/lib/settings';
 import { renderQuotationPdf } from '@/lib/pdf';
+import { buildInvoicePdfFileName } from '@/lib/pdf-filename';
 import { logAudit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
@@ -33,7 +34,13 @@ export async function GET(
   try {
     const pdf = await renderQuotationPdf(quotation, company, { paperSize });
     const asciiNumber = quotation.number.replace(/[^A-Za-z0-9._-]/g, '_') || quotation.id;
-    const fileName = `invoice-${asciiNumber}-${paperSize}.pdf`;
+    const asciiFallback = `invoice-${asciiNumber}-${paperSize}.pdf`;
+    const utf8FileName = buildInvoicePdfFileName({
+      customerName: quotation.customerName,
+      issueDate: quotation.issueDate,
+      documentNumber: quotation.number,
+      paperSize,
+    });
 
     await logAudit({
       actorId: user.id,
@@ -47,7 +54,7 @@ export async function GET(
     return new Response(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(`invoice-${quotation.number}-${paperSize}.pdf`)}`,
+        'Content-Disposition': `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(utf8FileName)}`,
         'Content-Length': String(pdf.length),
         'Cache-Control': 'no-store',
       },

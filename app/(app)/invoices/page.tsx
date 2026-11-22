@@ -249,6 +249,8 @@ export default async function InvoicesPage({
                       <InvoiceActions
                         id={row.id}
                         documentNumber={row.number}
+                        customerName={row.customerName}
+                        issueDate={row.issueDate.toISOString()}
                         status={row.status}
                         canEdit={canEdit}
                         canDelete={user.role === 'ADMIN'}

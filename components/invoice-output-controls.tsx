@@ -14,10 +14,18 @@ import type { ShareQuotationData } from '@/lib/share';
 interface Props {
   id: string;
   documentNumber: string;
+  customerName?: string;
+  issueDate?: string;
   shareData?: ShareQuotationData;
 }
 
-export function InvoiceOutputControls({ id, documentNumber, shareData }: Props) {
+export function InvoiceOutputControls({
+  id,
+  documentNumber,
+  customerName,
+  issueDate,
+  shareData,
+}: Props) {
   const [paperSize, setPaperSize] = useState<PaperSize>('A4');
   const [printing, setPrinting] = useState(false);
   const [savingPdf, setSavingPdf] = useState(false);
@@ -49,7 +57,10 @@ export function InvoiceOutputControls({ id, documentNumber, shareData }: Props) 
     setFeedback(null);
     setSavingPdf(true);
     try {
-      const res = await downloadInvoicePdf(id, documentNumber, paperSize);
+      const res = await downloadInvoicePdf(id, documentNumber, paperSize, {
+        customerName: customerName ?? shareData?.customerName,
+        issueDate: issueDate ?? shareData?.issueDate,
+      });
       if (res.ok) {
         setFeedback({
           ok: true,
@@ -158,6 +169,8 @@ export function InvoiceOutputControls({ id, documentNumber, shareData }: Props) 
         onClose={() => setShareOpen(false)}
         quotationId={id}
         documentNumber={documentNumber}
+        customerName={customerName ?? shareData?.customerName}
+        issueDate={issueDate ?? shareData?.issueDate}
         initialData={shareData}
         initialPaperSize={paperSize}
       />

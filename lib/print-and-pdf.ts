@@ -1,6 +1,13 @@
 'use client';
 
+import {
+  buildInvoicePdfFileName,
+  parseContentDispositionFileName,
+  type PdfFileNameInput,
+} from '@/lib/pdf-filename';
+
 export type PaperSize = 'A4' | 'A5';
+export type PdfFileMeta = Pick<PdfFileNameInput, 'customerName' | 'issueDate'>;
 
 export function applyPrintPaperSize(paperSize: PaperSize) {
   if (typeof document === 'undefined') return;
@@ -58,6 +65,7 @@ export async function fetchInvoicePdfBytes(
   id: string,
   documentNumber: string,
   paperSize: PaperSize,
+  meta?: PdfFileMeta,
 ): Promise<{ ok: boolean; bytes?: Uint8Array; fileName?: string; error?: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20_000);
@@ -80,8 +88,17 @@ export async function fetchInvoicePdfBytes(
       return { ok: false, error: 'فایل PDF خروجی خالی است.' };
     }
 
-    const safeNumber = documentNumber.replace(/[^A-Za-z0-9._-]/g, '_') || id;
-    const fileName = `invoice-${safeNumber}-${paperSize}.pdf`;
+    const fileName =
+      meta?.customerName || meta?.issueDate
+        ? buildInvoicePdfFileName({
+            customerName: meta.customerName,
+            issueDate: meta.issueDate,
+            documentNumber,
+            paperSize,
+          })
+        : parseContentDispositionFileName(response.headers.get('content-disposition')) ||
+          buildInvoicePdfFileName({ documentNumber, paperSize });
+
     return { ok: true, bytes, fileName };
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
@@ -111,8 +128,9 @@ export async function downloadInvoicePdf(
   id: string,
   documentNumber: string,
   paperSize: PaperSize,
+  meta?: PdfFileMeta,
 ): Promise<{ ok: boolean; canceled?: boolean; filePath?: string; error?: string }> {
-  const fetched = await fetchInvoicePdfBytes(id, documentNumber, paperSize);
+  const fetched = await fetchInvoicePdfBytes(id, documentNumber, paperSize, meta);
   if (!fetched.ok || !fetched.bytes || !fetched.fileName) {
     return { ok: false, error: fetched.error };
   }
@@ -130,6 +148,7 @@ export async function prepareSharePdfFile(
   id: string,
   documentNumber: string,
   paperSize: PaperSize,
+  meta?: PdfFileMeta,
 ): Promise<{
   ok: boolean;
   bytes?: Uint8Array;
@@ -137,7 +156,7 @@ export async function prepareSharePdfFile(
   filePath?: string;
   error?: string;
 }> {
-  const fetched = await fetchInvoicePdfBytes(id, documentNumber, paperSize);
+  const fetched = await fetchInvoicePdfBytes(id, documentNumber, paperSize, meta);
   if (!fetched.ok || !fetched.bytes || !fetched.fileName) {
     return { ok: false, error: fetched.error };
   }
