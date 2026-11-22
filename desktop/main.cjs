@@ -39,6 +39,9 @@ let logStream = null;
 let autoUpdater = null;
 let manualCheckRequested = false;
 let shutdownPromise = null;
+let isQuitting = false;
+let shutdownCompleted = false;
+let isInstallingUpdate = false;
 
 let updateState = {
   status: isDev ? 'unsupported' : 'idle',
@@ -437,13 +440,16 @@ function shutdown() {
           if (done) return;
           try {
             if (process.platform === 'win32' && proc.pid) {
-              spawn('taskkill', ['/pid', String(proc.pid), '/T', '/F'], {
+              const killer = spawn('taskkill', ['/pid', String(proc.pid), '/T', '/F'], {
                 windowsHide: true,
                 stdio: 'ignore',
               });
-            } else {
-              proc.kill('SIGKILL');
+              killer.once('close', finish);
+              killer.once('error', finish);
+              setTimeout(finish, 1500);
+              return;
             }
+            proc.kill('SIGKILL');
           } catch {
             /* ignore */
           }
@@ -451,21 +457,37 @@ function shutdown() {
         }, 2500);
       });
     }
-    try {
-      await postgres?.stop();
-      postgres = null;
-    } catch {
-      /* ignore */
+    const pg = postgres;
+    postgres = null;
+    if (pg) {
+      try {
+        await Promise.race([
+          pg.stop(),
+          new Promise((resolve) => setTimeout(resolve, 5000)),
+        ]);
+      } catch {
+        /* ignore */
+      }
     }
+    shutdownCompleted = true;
   })();
   return shutdownPromise;
 }
 
 async function installDownloadedUpdate() {
-  if (!autoUpdater) return;
+  if (!autoUpdater || isInstallingUpdate) return;
+  isInstallingUpdate = true;
+  isQuitting = true;
   log('آماده‌سازی نصب نسخه جدید و بستن سرور داخلی...');
-  await shutdown();
-  autoUpdater.quitAndInstall(false, true);
+  try {
+    await shutdown();
+    setImmediate(() => {
+      autoUpdater.quitAndInstall(false, true);
+    });
+  } catch (err) {
+    isInstallingUpdate = false;
+    log('خطا هنگام آماده‌سازی نصب نسخه جدید:', err?.message || String(err));
+  }
 }
 
 function formatUpdaterError(err) {
@@ -908,10 +930,25 @@ app.on('window-all-closed', () => {
   app.quit();
 });
 
-app.on('before-quit', () => {
-  shutdown();
+app.on('before-quit', (event) => {
+  if (shutdownCompleted) return;
+  event.preventDefault();
+  if (isQuitting) return;
+  isQuitting = true;
+  shutdown()
+    .catch((err) => log('خطا هنگام بستن سرویس‌ها:', err?.message || String(err)))
+    .finally(() => {
+      shutdownCompleted = true;
+      app.quit();
+    });
 });
 
 process.on('exit', () => {
-  shutdown();
+  if (!shutdownCompleted && nextProcess && nextProcess.exitCode === null) {
+    try {
+      nextProcess.kill();
+    } catch {
+      /* ignore */
+    }
+  }
 });
