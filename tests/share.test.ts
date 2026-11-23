@@ -65,5 +65,8 @@ describe('ابزارهای اشتراک‌گذاری پیش‌فاکتور', () 
     expect(text).toContain('میلگرد ۱۶');
     expect(text).toContain('شرکت آهن آگرین');
     expect(text).toContain('نقدی');
+    expect(text).toContain('AG-۱۴۰۵-۰۰۰۱');
+    expect(text).toContain('۰۲۱۱۲۳۴۵۶۷۸');
+    expect(text).not.toMatch(/[0-9]/);
   });
 });

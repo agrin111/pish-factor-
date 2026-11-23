@@ -8,7 +8,7 @@ import { InvoiceDocument } from '@/components/invoice-document';
 import { InvoiceActions } from '@/components/invoice-actions';
 import { InvoiceOutputControls } from '@/components/invoice-output-controls';
 import { formatJalali } from '@/lib/jalali';
-import { formatDocumentNumber } from '@/lib/format';
+import { formatDocumentNumber, formatPersianText, toPersianDigits } from '@/lib/format';
 import { effectiveStatus } from '@/lib/quotation-status';
 import { STATUS_BADGE, STATUS_LABEL } from '@/lib/labels';
 import { PageHeader } from '@/components/ui/page-header';
@@ -79,9 +79,9 @@ export default async function InvoiceDetailPage({
           meta={<span className={STATUS_BADGE[shownStatus]}>{STATUS_LABEL[shownStatus]}</span>}
           description={
             <>
-              {quotation.customerName} · صدور{' '}
+              {formatPersianText(quotation.customerName)} · صدور{' '}
               <span className="numeric">{formatJalali(quotation.issueDate)}</span> · صادرکننده{' '}
-              {quotation.createdBy.fullName}
+              {formatPersianText(quotation.createdBy.fullName)}
             </>
           }
           actions={
@@ -186,15 +186,17 @@ export default async function InvoiceDetailPage({
                     <>ثبت اولیه با وضعیت «{STATUS_LABEL[entry.toStatus]}»</>
                   )}
                 </span>
-                {entry.note && <span className="muted">— {entry.note}</span>}
+                {entry.note && <span className="muted">— {formatPersianText(entry.note)}</span>}
               </div>
               <div className="muted flex items-center gap-2 text-[11px]">
-                <span>{entry.changedBy.fullName}</span>
+                <span>{formatPersianText(entry.changedBy.fullName)}</span>
                 <span className="numeric" dir="ltr">
-                  {new Intl.DateTimeFormat('fa-IR', {
-                    dateStyle: 'short',
-                    timeStyle: 'short',
-                  }).format(entry.createdAt)}
+                  {toPersianDigits(
+                    new Intl.DateTimeFormat('fa-IR', {
+                      dateStyle: 'short',
+                      timeStyle: 'short',
+                    }).format(entry.createdAt),
+                  )}
                 </span>
               </div>
             </li>

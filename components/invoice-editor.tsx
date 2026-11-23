@@ -13,6 +13,7 @@ import {
   formatCurrency,
   formatDocumentNumber,
   formatNumber,
+  formatPersianText,
   toEnglishDigits,
   toNumber,
   toPersianDigits,
@@ -403,28 +404,34 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
             <option value="">انتخاب مشتری...</option>
             {customers.map((customer) => (
               <option key={customer.id} value={customer.id}>
-                {customer.name} — {customer.mobile}
-                {customer.companyOrProject ? ` — ${customer.companyOrProject}` : ''}
+                {formatPersianText(customer.name)} — {toPersianDigits(customer.mobile)}
+                {customer.companyOrProject
+                  ? ` — ${formatPersianText(customer.companyOrProject)}`
+                  : ''}
               </option>
             ))}
           </select>
           {selectedCustomer && (
             <p className="field-hint">
-              موبایل: <span className="numeric">{selectedCustomer.mobile}</span>
+              موبایل: <span className="numeric">{toPersianDigits(selectedCustomer.mobile)}</span>
               {selectedCustomer.secondaryPhone ? (
                 <>
                   {' '}
-                  · تماس دوم: <span className="numeric">{selectedCustomer.secondaryPhone}</span>
+                  · تماس دوم:{' '}
+                  <span className="numeric">{toPersianDigits(selectedCustomer.secondaryPhone)}</span>
                 </>
               ) : null}
               {selectedCustomer.nationalId ? (
                 <>
                   {' '}
-                  · شناسه/کد ملی: <span className="numeric">{selectedCustomer.nationalId}</span>
+                  · شناسه/کد ملی:{' '}
+                  <span className="numeric">{toPersianDigits(selectedCustomer.nationalId)}</span>
                 </>
               ) : null}
-              {selectedCustomer.city ? ` · شهر: ${selectedCustomer.city}` : ''}
-              {selectedCustomer.address ? ` — ${selectedCustomer.address}` : ''}
+              {selectedCustomer.city ? ` · شهر: ${formatPersianText(selectedCustomer.city)}` : ''}
+              {selectedCustomer.address
+                ? ` — ${formatPersianText(selectedCustomer.address)}`
+                : ''}
             </p>
           )}
         </div>
@@ -585,7 +592,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                       <option value="">— انتخاب از کاتالوگ —</option>
                       {products.map((product) => (
                         <option key={product.id} value={product.id}>
-                          {product.name} ({product.sku})
+                          {formatPersianText(product.name)} ({toPersianDigits(product.sku)})
                         </option>
                       ))}
                     </select>

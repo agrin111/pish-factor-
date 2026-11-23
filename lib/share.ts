@@ -1,4 +1,12 @@
-import { amountInWords, formatCurrency, formatDocumentNumber, formatNumber, toEnglishDigits } from '@/lib/format';
+import {
+  amountInWords,
+  formatCurrency,
+  formatDocumentNumber,
+  formatNumber,
+  formatPersianText,
+  toEnglishDigits,
+  toPersianDigits,
+} from '@/lib/format';
 import { formatJalali } from '@/lib/jalali';
 import { UNIT_LABEL } from '@/lib/labels';
 import type { UnitType } from '@prisma/client';
@@ -51,8 +59,8 @@ export function buildInvoiceShareText(data: ShareQuotationData): string {
   const currencyLabel = data.currency === 'RIAL' ? 'ریال' : 'تومان';
 
   const lines: string[] = [
-    `با سلام، احتراماً پیش‌فاکتور شماره ${formatDocumentNumber(data.number)} از طرف ${data.companyName} خدمت شما ارسال می‌گردد:`,
-    `مشتری محترم: ${data.customerName}${data.customerCompany ? ` (${data.customerCompany})` : ''}`,
+    `با سلام، احتراماً پیش‌فاکتور شماره ${formatDocumentNumber(data.number)} از طرف ${formatPersianText(data.companyName)} خدمت شما ارسال می‌گردد:`,
+    `مشتری محترم: ${formatPersianText(data.customerName)}${data.customerCompany ? ` (${formatPersianText(data.customerCompany)})` : ''}`,
     `تاریخ صدور: ${issue} | اعتبار تا: ${validUntil} (${formatNumber(data.validDays, 0)} روز)`,
     '',
     'اقلام پیش‌فاکتور:',
@@ -61,9 +69,9 @@ export function buildInvoiceShareText(data: ShareQuotationData): string {
   const previewItems = data.items.slice(0, 15);
   for (const item of previewItems) {
     const unitName = UNIT_LABEL[item.unit] ?? '';
-    const sizeText = item.size ? ` (سایز ${item.size})` : '';
+    const sizeText = item.size ? ` (سایز ${formatPersianText(item.size)})` : '';
     lines.push(
-      `${formatNumber(item.rowIndex, 0)}. ${item.productName}${sizeText} — ${formatNumber(item.quantity, 3)} ${unitName} × ${formatNumber(item.unitPrice, 0)} = ${formatNumber(item.lineTotal, 0)} ${currencyLabel}`,
+      `${formatNumber(item.rowIndex, 0)}. ${formatPersianText(item.productName)}${sizeText} — ${formatNumber(item.quantity, 3)} ${unitName} × ${formatNumber(item.unitPrice, 0)} = ${formatNumber(item.lineTotal, 0)} ${currencyLabel}`,
     );
   }
   if (data.items.length > previewItems.length) {
@@ -75,13 +83,13 @@ export function buildInvoiceShareText(data: ShareQuotationData): string {
   lines.push(`به حروف: ${amountInWords(data.grandTotal, data.currency)}`);
 
   if (data.paymentTerms) {
-    lines.push(`شرایط پرداخت: ${data.paymentTerms}`);
+    lines.push(`شرایط پرداخت: ${formatPersianText(data.paymentTerms)}`);
   }
   if (data.deliveryTerms) {
-    lines.push(`شرایط تحویل: ${data.deliveryTerms}`);
+    lines.push(`شرایط تحویل: ${formatPersianText(data.deliveryTerms)}`);
   }
   if (data.companyPhone) {
-    lines.push(`شماره تماس: ${data.companyPhone}`);
+    lines.push(`شماره تماس: ${toPersianDigits(data.companyPhone)}`);
   }
 
   return lines.join('\n');

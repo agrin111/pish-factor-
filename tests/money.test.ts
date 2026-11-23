@@ -4,9 +4,11 @@ import { computeTotals, dec, roundMoney } from '@/lib/money';
 import {
   formatDocumentNumber,
   formatNumber,
+  formatPersianText,
   normalizeNumberString,
   numberToPersianWords,
   toNumber,
+  toPersianDigits,
 } from '@/lib/format';
 
 const num = (value: Prisma.Decimal) => Number(value.toString());
@@ -117,5 +119,15 @@ describe('ورودی ارقام فارسی', () => {
 
   it('شماره سند را با ارقام فارسی و پیشوند لاتین نمایش می‌دهد', () => {
     expect(formatDocumentNumber('AG-1405-0001')).toBe('AG-۱۴۰۵-۰۰۰۱');
+  });
+
+  it('متن‌های نمایشی را به ارقام فارسی تبدیل می‌کند و ایمیل/لینک را حفظ می‌کند', () => {
+    expect(toPersianDigits('0912-٠١٢')).toBe('۰۹۱۲-۰۱۲');
+    expect(formatPersianText('ساختمان شماره 68 طبقه 5 واحد 21')).toBe(
+      'ساختمان شماره ۶۸ طبقه ۵ واحد ۲۱',
+    );
+    expect(formatPersianText('تلفن: 02144069168 · ایمیل: sales2@ahan.ir · https://ahan2.ir/p1')).toBe(
+      'تلفن: ۰۲۱۴۴۰۶۹۱۶۸ · ایمیل: sales2@ahan.ir · https://ahan2.ir/p1',
+    );
   });
 });

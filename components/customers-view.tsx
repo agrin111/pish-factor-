@@ -8,7 +8,7 @@ import { initialActionState } from '@/lib/forms';
 import { Modal } from '@/components/modal';
 import { SubmitButton } from '@/components/submit-button';
 import { CUSTOMER_TYPE_LABEL } from '@/lib/labels';
-import { formatNumber } from '@/lib/format';
+import { formatNumber, formatPersianText, toPersianDigits } from '@/lib/format';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 
@@ -129,8 +129,8 @@ export function CustomersView({ customers, isAdmin }: Props) {
           <option value="INDIVIDUAL">حقیقی</option>
           <option value="COMPANY">حقوقی</option>
         </select>
-        <span className="muted text-xs">
-          {new Intl.NumberFormat('fa-IR').format(filtered.length)} مشتری
+        <span className="muted numeric text-xs">
+          {formatNumber(filtered.length, 0)} مشتری
         </span>
         {deleteState.message && !deleteState.ok && (
           <span className="text-xs text-danger">{deleteState.message}</span>
@@ -167,26 +167,32 @@ export function CustomersView({ customers, isAdmin }: Props) {
               {filtered.map((customer) => (
                 <tr key={customer.id}>
                   <td className="font-semibold">
-                    {customer.name}
+                    {formatPersianText(customer.name)}
                     {customer.address && (
                       <div className="muted mt-0.5 max-w-[220px] truncate text-[11px] font-normal">
-                        {customer.address}
+                        {formatPersianText(customer.address)}
                       </div>
                     )}
                   </td>
                   <td className="numeric" dir="ltr">
-                    <div>{customer.mobile}</div>
+                    <div>{toPersianDigits(customer.mobile)}</div>
                     {customer.secondaryPhone && (
-                      <div className="muted mt-0.5 text-[11px]">{customer.secondaryPhone}</div>
+                      <div className="muted mt-0.5 text-[11px]">
+                        {toPersianDigits(customer.secondaryPhone)}
+                      </div>
                     )}
                   </td>
-                  <td>{customer.companyOrProject ?? '—'}</td>
+                  <td>{customer.companyOrProject ? formatPersianText(customer.companyOrProject) : '—'}</td>
                   <td className="numeric text-xs">
                     {customer.nationalId || customer.economicCode ? (
                       <div className="space-y-0.5">
-                        {customer.nationalId && <div>ملی: {customer.nationalId}</div>}
+                        {customer.nationalId && (
+                          <div>ملی: {toPersianDigits(customer.nationalId)}</div>
+                        )}
                         {customer.economicCode && (
-                          <div className="muted text-[11px]">اقتصادی: {customer.economicCode}</div>
+                          <div className="muted text-[11px]">
+                            اقتصادی: {toPersianDigits(customer.economicCode)}
+                          </div>
                         )}
                       </div>
                     ) : (
@@ -235,7 +241,7 @@ export function CustomersView({ customers, isAdmin }: Props) {
 
       <Modal
         open={open}
-        title={editing ? `ویرایش مشتری ${editing.name}` : 'ثبت مشتری جدید'}
+        title={editing ? `ویرایش مشتری ${formatPersianText(editing.name)}` : 'ثبت مشتری جدید'}
         onClose={() => {
           setOpen(false);
           setEditing(null);

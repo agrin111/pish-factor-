@@ -9,6 +9,7 @@ import { initialActionState } from '@/lib/forms';
 import { SubmitButton } from '@/components/submit-button';
 import { BrandLogo } from '@/components/brand-logo';
 import { PrintButton } from '@/components/print-button';
+import { formatPersianText, toPersianDigits } from '@/lib/format';
 import type { ResolvedLetterhead } from '@/lib/settings';
 
 interface Props {
@@ -91,8 +92,8 @@ export function LetterheadView({
   };
 
   const contactLine = [
-    phone ? `تلفن: ${phone}` : null,
-    secondaryPhone || null,
+    phone ? `تلفن: ${toPersianDigits(phone)}` : null,
+    secondaryPhone ? toPersianDigits(secondaryPhone) : null,
     email || null,
     website || null,
   ]
@@ -371,7 +372,7 @@ export function LetterheadView({
         </form>
       )}
 
-      <div className="print-area card mx-auto w-full max-w-[820px] p-6 sm:p-10">
+      <div className="print-area letterhead-paper card mx-auto w-full max-w-[820px] p-6 sm:p-10">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b-4 border-ink-900 pb-4">
           <div className="flex items-center gap-4">
             {displayLogo ? (
@@ -387,43 +388,51 @@ export function LetterheadView({
               </span>
             )}
             <div>
-              <div className="text-lg font-extrabold">{companyName || 'بدون عنوان'}</div>
-              {subtitle && <div className="muted text-[11px]">{subtitle}</div>}
+              <div className="doc-print-title text-lg font-extrabold">
+                {formatPersianText(companyName) || 'بدون عنوان'}
+              </div>
+              {subtitle && (
+                <div className="muted doc-print-muted text-[11px]">
+                  {formatPersianText(subtitle)}
+                </div>
+              )}
               {contactLine && (
-                <div className="numeric muted mt-1 text-[11px]" dir="auto">
+                <div className="numeric muted doc-print-muted mt-1 text-[11px]" dir="auto">
                   {contactLine}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="numeric space-y-0.5 text-[11px] sm:text-left">
-            {nationalId && <div>شناسه ملی: {nationalId}</div>}
-            {economicCode && <div>کد اقتصادی: {economicCode}</div>}
-            {registrationNo && <div>شماره ثبت: {registrationNo}</div>}
-            {address && <div className="max-w-[280px] leading-relaxed">{address}</div>}
+          <div className="numeric doc-print-muted space-y-0.5 text-[11px] sm:text-left print:text-left">
+            {nationalId && <div>شناسه ملی: {toPersianDigits(nationalId)}</div>}
+            {economicCode && <div>کد اقتصادی: {toPersianDigits(economicCode)}</div>}
+            {registrationNo && <div>شماره ثبت: {toPersianDigits(registrationNo)}</div>}
+            {address && (
+              <div className="max-w-[280px] leading-relaxed">{formatPersianText(address)}</div>
+            )}
           </div>
         </div>
 
         <div className="mt-5 flex items-center justify-between text-[11px]">
-          <div className="numeric">تاریخ: {todayLabel}</div>
+          <div className="numeric">تاریخ: {toPersianDigits(todayLabel)}</div>
           <div className="flex items-baseline gap-1">
             <span>شماره:</span>
             <span className="inline-block w-40 border-b border-dotted border-ink-900" />
           </div>
         </div>
 
-        <div className="mt-8 space-y-6" aria-hidden="true">
+        <div className="letterhead-lines mt-8 space-y-6" aria-hidden="true">
           {Array.from({ length: 16 }).map((_, index) => (
-            <div key={index} className="border-b border-dotted border-line" />
+            <div key={index} className="letterhead-line border-b border-dotted border-line" />
           ))}
         </div>
 
-        <div className="numeric mt-8 border-t border-line pt-3 text-[10px] text-steel-600">
-          {companyName}
-          {phone ? ` — ${phone}` : ''}
+        <div className="numeric doc-print-foot mt-8 border-t border-line pt-3 text-[10px] text-steel-600">
+          {formatPersianText(companyName)}
+          {phone ? ` — ${toPersianDigits(phone)}` : ''}
           {website ? ` — ${website}` : ''}
-          {address ? ` — ${address}` : ''}
+          {address ? ` — ${formatPersianText(address)}` : ''}
         </div>
       </div>
     </div>

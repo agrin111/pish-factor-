@@ -3,7 +3,13 @@ import { Download } from 'lucide-react';
 import { requireUser } from '@/lib/auth';
 import { getCompanySettings } from '@/lib/settings';
 import { loadReport } from '@/lib/reports';
-import { formatCurrency, formatDocumentNumber, formatNumber } from '@/lib/format';
+import {
+  formatCurrency,
+  formatDocumentNumber,
+  formatNumber,
+  formatPersianText,
+  toPersianDigits,
+} from '@/lib/format';
 import { formatJalali, jalaliToDate, parseJalaliInput, toJalali, todayUtc } from '@/lib/jalali';
 import { STATUS_BADGE, STATUS_LABEL } from '@/lib/labels';
 import { PageHeader } from '@/components/ui/page-header';
@@ -173,9 +179,9 @@ export default async function ReportsPage({
               <tbody>
                 {report.customers.map((row) => (
                   <tr key={`${row.name}-${row.mobile}`}>
-                    <td className="font-semibold">{row.name}</td>
+                    <td className="font-semibold">{formatPersianText(row.name)}</td>
                     <td className="numeric" dir="ltr">
-                      {row.mobile}
+                      {toPersianDigits(row.mobile)}
                     </td>
                     <td className="numeric">{formatNumber(row.count, 0)}</td>
                     <td className="numeric">{formatCurrency(row.amount, currency)}</td>
@@ -220,9 +226,9 @@ export default async function ReportsPage({
                         {formatDocumentNumber(row.number)}
                       </Link>
                     </td>
-                    <td>{row.customerName}</td>
+                    <td>{formatPersianText(row.customerName)}</td>
                     <td className="numeric" dir="ltr">
-                      {row.customerMobile || '—'}
+                      {row.customerMobile ? toPersianDigits(row.customerMobile) : '—'}
                     </td>
                     <td className="numeric">{formatJalali(row.issueDate)}</td>
                     <td>{row.userName}</td>

@@ -2,17 +2,39 @@
 
 const FA_NUMBER = new Intl.NumberFormat('fa-IR');
 const FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 
-/** ارقام لاتین را به فارسی تبدیل می‌کند (فقط رقم‌ها؛ حروف و علائم دست‌نخورده می‌مانند). */
+/** ارقام لاتین و عربی را به فارسی تبدیل می‌کند (فقط رقم‌ها؛ حروف و علائم دست‌نخورده می‌مانند). */
 export function toPersianDigits(value: string | number): string {
-  return String(value).replace(/[0-9]/g, (digit) => FA_DIGITS[Number(digit)]);
+  return String(value)
+    .replace(/[0-9]/g, (digit) => FA_DIGITS[Number(digit)])
+    .replace(/[٠-٩]/g, (digit) => FA_DIGITS[AR_DIGITS.indexOf(digit)]);
+}
+
+const PRESERVED_URL_OR_EMAIL =
+  /(?:https?:\/\/\S+|www\.\S+|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/gi;
+
+/** تمام ارقام موجود در متن‌های نمایشی (نشانی، تلفن، مشخصات و...) را به فارسی تبدیل می‌کند و لینک/ایمیل را دست‌نخورده نگه می‌دارد. */
+export function formatPersianText(value: string | null | undefined): string {
+  if (!value) return '';
+  const str = String(value);
+  let out = '';
+  let lastIndex = 0;
+  for (const match of str.matchAll(PRESERVED_URL_OR_EMAIL)) {
+    const idx = match.index ?? 0;
+    out += toPersianDigits(str.slice(lastIndex, idx));
+    out += match[0];
+    lastIndex = idx + match[0].length;
+  }
+  out += toPersianDigits(str.slice(lastIndex));
+  return out;
 }
 
 /** ارقام فارسی و عربی را به لاتین تبدیل می‌کند تا محاسبه و اعتبارسنجی ممکن شود. */
 export function toEnglishDigits(value: string): string {
   return value
     .replace(/[۰-۹]/g, (digit) => String(FA_DIGITS.indexOf(digit)))
-    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
+    .replace(/[٠-٩]/g, (digit) => String(AR_DIGITS.indexOf(digit)));
 }
 
 /** ورودی کاربر را به رشته عددی لاتین تبدیل می‌کند: ارقام فارسی، ممیز عربی و جداکننده هزارگان. */
@@ -40,13 +62,17 @@ export function toNumber(value: unknown): number {
 }
 
 export function formatNumber(value: unknown, maxFractionDigits = 3): string {
-  return new Intl.NumberFormat('fa-IR', { maximumFractionDigits: maxFractionDigits }).format(
-    toNumber(value),
+  return toPersianDigits(
+    new Intl.NumberFormat('fa-IR', { maximumFractionDigits: maxFractionDigits }).format(
+      toNumber(value),
+    ),
   );
 }
 
 export function formatCurrency(value: unknown, currency: string): string {
-  return `${FA_NUMBER.format(Math.round(toNumber(value)))} ${CURRENCY_LABEL[currency] ?? 'تومان'}`;
+  return toPersianDigits(
+    `${FA_NUMBER.format(Math.round(toNumber(value)))} ${CURRENCY_LABEL[currency] ?? 'تومان'}`,
+  );
 }
 
 const ONES = ['', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه'];

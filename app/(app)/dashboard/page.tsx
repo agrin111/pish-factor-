@@ -12,7 +12,14 @@ import {
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { formatJalali, jalaliToDate, toJalali, todayUtc } from '@/lib/jalali';
-import { formatCurrency, formatDocumentNumber, formatNumber, toNumber } from '@/lib/format';
+import {
+  formatCurrency,
+  formatDocumentNumber,
+  formatNumber,
+  formatPersianText,
+  toNumber,
+  toPersianDigits,
+} from '@/lib/format';
 import { STATUS_BADGE, STATUS_LABEL } from '@/lib/labels';
 import { effectiveStatus } from '@/lib/quotation-status';
 import { getCompanySettings } from '@/lib/settings';
@@ -178,7 +185,7 @@ export default async function DashboardPage() {
         title="داشبورد فروش"
         description={
           <>
-            {user.fullName} — {user.role === 'ADMIN' ? 'مدیر سیستم' : 'کارمند فروش (اسناد شما)'} ·
+            {formatPersianText(user.fullName)} — {user.role === 'ADMIN' ? 'مدیر سیستم' : 'کارمند فروش (اسناد شما)'} ·
             امروز <span className="numeric">{formatJalali(today)}</span>
           </>
         }
@@ -311,7 +318,7 @@ export default async function DashboardPage() {
                         {formatDocumentNumber(row.number)}
                       </Link>
                       <div className="muted mt-0.5 truncate text-[11px]">
-                        {row.customerName} · {formatJalali(row.issueDate)}
+                        {formatPersianText(row.customerName)} · {formatJalali(row.issueDate)}
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -346,10 +353,14 @@ export default async function DashboardPage() {
                     <Users className="h-3.5 w-3.5 text-accent-600" />
                   </span>
                   <div className="min-w-0">
-                    <div className="truncate text-xs font-semibold">{customer.name}</div>
+                    <div className="truncate text-xs font-semibold">
+                      {formatPersianText(customer.name)}
+                    </div>
                     <div className="muted numeric truncate text-[11px]">
-                      {customer.mobile}
-                      {customer.companyOrProject ? ` · ${customer.companyOrProject}` : ''}
+                      {toPersianDigits(customer.mobile)}
+                      {customer.companyOrProject
+                        ? ` · ${formatPersianText(customer.companyOrProject)}`
+                        : ''}
                     </div>
                   </div>
                 </li>

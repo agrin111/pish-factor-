@@ -13,7 +13,7 @@ import { initialActionState } from '@/lib/forms';
 import { Modal } from '@/components/modal';
 import { SubmitButton } from '@/components/submit-button';
 import { ROLE_LABEL } from '@/lib/labels';
-import { formatNumber } from '@/lib/format';
+import { formatNumber, formatPersianText, toPersianDigits } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 
 interface UserRow {
@@ -138,7 +138,7 @@ export function UsersView({
             {users.map((user) => (
               <tr key={user.id}>
                 <td className="font-semibold">
-                  {user.fullName}
+                  {formatPersianText(user.fullName)}
                   {user.id === currentUserId && (
                     <span className="badge badge-blue mr-2 !text-[10px]">شما</span>
                   )}
@@ -147,7 +147,7 @@ export function UsersView({
                   {user.username}
                 </td>
                 <td dir="ltr" className="numeric text-left text-xs">
-                  {user.phone ?? '—'}
+                  {user.phone ? toPersianDigits(user.phone) : '—'}
                 </td>
                 <td>
                   <span className={user.role === 'ADMIN' ? 'badge badge-green' : 'badge badge-gray'}>
@@ -227,7 +227,7 @@ export function UsersView({
               ))}
             </select>
             <span className="muted numeric text-[11px]">
-              {new Intl.NumberFormat('fa-IR').format(filteredLogs.length)} رکورد
+              {formatNumber(filteredLogs.length, 0)} رکورد
             </span>
           </div>
         </div>
@@ -258,7 +258,7 @@ export function UsersView({
                         {log.action}
                       </span>
                     </td>
-                    <td className="text-xs">{log.summary}</td>
+                    <td className="text-xs">{formatPersianText(log.summary)}</td>
                   </tr>
                 ))
               )}

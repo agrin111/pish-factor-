@@ -19,8 +19,20 @@ export function applyPrintPaperSize(paperSize: PaperSize) {
     styleEl.id = styleId;
     document.head.appendChild(styleEl);
   }
-  const margin = paperSize === 'A5' ? '7mm' : '10mm';
-  styleEl.textContent = `@page { size: ${paperSize} portrait; margin: ${margin}; }`;
+  const clearMarginBoxes =
+    '@top-left-corner { content: none !important; display: none !important; } ' +
+    '@top-left { content: none !important; display: none !important; } ' +
+    '@top-center { content: none !important; display: none !important; } ' +
+    '@top-right { content: none !important; display: none !important; } ' +
+    '@top-right-corner { content: none !important; display: none !important; } ' +
+    '@bottom-left-corner { content: none !important; display: none !important; } ' +
+    '@bottom-left { content: none !important; display: none !important; } ' +
+    '@bottom-center { content: none !important; display: none !important; } ' +
+    '@bottom-right { content: none !important; display: none !important; } ' +
+    '@bottom-right-corner { content: none !important; display: none !important; }';
+  styleEl.textContent =
+    `@page { size: ${paperSize} portrait; margin: 0; ${clearMarginBoxes} } ` +
+    `@page ${paperSize.toLowerCase()} { size: ${paperSize} portrait; margin: 0; ${clearMarginBoxes} }`;
 }
 
 export async function printCurrentDocument(

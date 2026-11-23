@@ -13,7 +13,7 @@ import {
 import { initialActionState } from '@/lib/forms';
 import { Modal } from '@/components/modal';
 import { SubmitButton } from '@/components/submit-button';
-import { formatCurrency, formatNumber } from '@/lib/format';
+import { formatCurrency, formatNumber, formatPersianText, toPersianDigits } from '@/lib/format';
 import { NumberField } from '@/components/number-field';
 import { UNIT_LABEL, UNITS } from '@/lib/labels';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -210,8 +210,8 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
           <option value="ACTIVE">فقط فعال</option>
           <option value="INACTIVE">فقط غیرفعال</option>
         </select>
-        <span className="muted text-xs">
-          {new Intl.NumberFormat('fa-IR').format(filtered.length)} کالا
+        <span className="muted numeric text-xs">
+          {formatNumber(filtered.length, 0)} کالا
         </span>
       </div>
 
@@ -244,26 +244,29 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
               {filtered.map((product) => (
                 <tr key={product.id}>
                   <td className="font-semibold">
-                    {product.name}
+                    {formatPersianText(product.name)}
                     {product.description && (
                       <div className="muted mt-0.5 max-w-[220px] truncate text-[11px] font-normal">
-                        {product.description}
+                        {formatPersianText(product.description)}
                       </div>
                     )}
                   </td>
                   <td className="numeric" dir="ltr">
-                    {product.sku}
+                    {toPersianDigits(product.sku)}
                   </td>
                   <td>
-                    <div>{product.categoryName ?? '—'}</div>
+                    <div>{product.categoryName ? formatPersianText(product.categoryName) : '—'}</div>
                     {product.factory && (
-                      <div className="muted mt-0.5 text-[11px]">{product.factory}</div>
+                      <div className="muted mt-0.5 text-[11px]">
+                        {formatPersianText(product.factory)}
+                      </div>
                     )}
                   </td>
                   <td className="max-w-[240px]">
                     <span className="muted line-clamp-2 text-[11px]">
                       {[product.size, product.thickness, product.length, product.specs]
                         .filter(Boolean)
+                        .map((part) => formatPersianText(part))
                         .join(' · ') || '—'}
                     </span>
                   </td>
@@ -494,7 +497,7 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
 
             <div>
               <label className="label" htmlFor="unitPrice">
-                قیمت واحد پایه ({currency} — اختیاری)
+                قیمت واحد پایه ({currency === 'RIAL' ? 'ریال' : 'تومان'} — اختیاری)
               </label>
               <NumberField
                 id="unitPrice"

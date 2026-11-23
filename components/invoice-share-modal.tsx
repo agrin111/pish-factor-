@@ -32,7 +32,12 @@ import {
   triggerBrowserPdfDownload,
   type PaperSize,
 } from '@/lib/print-and-pdf';
-import { formatDocumentNumber } from '@/lib/format';
+import {
+  formatDocumentNumber,
+  formatPersianText,
+  toEnglishDigits,
+  toPersianDigits,
+} from '@/lib/format';
 
 interface Props {
   open: boolean;
@@ -126,7 +131,7 @@ export function InvoiceShareModal({
   }, [open, quotationId, initialData]);
 
   const emailSubject = data
-    ? `پیش‌فاکتور شماره ${formatDocumentNumber(data.number)} — ${data.companyName}`
+    ? `پیش‌فاکتور شماره ${formatDocumentNumber(data.number)} — ${formatPersianText(data.companyName)}`
     : `پیش‌فاکتور ${formatDocumentNumber(documentNumber)}`;
 
   const isDesktop = typeof window !== 'undefined' && Boolean(window.pishfactorDesktop?.isDesktop);
@@ -392,9 +397,9 @@ export function InvoiceShareModal({
                   id="share-phone"
                   className="input numeric"
                   dir="ltr"
-                  placeholder="09123456789"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                  value={toPersianDigits(phone)}
+                  onChange={(e) => setPhone(toEnglishDigits(e.target.value))}
                 />
               </div>
               <div>

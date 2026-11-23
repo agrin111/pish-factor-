@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Printer } from 'lucide-react';
-import { printCurrentDocument, type PaperSize } from '@/lib/print-and-pdf';
+import { applyPrintPaperSize, printCurrentDocument, type PaperSize } from '@/lib/print-and-pdf';
 
 interface Props {
   label?: string;
@@ -24,6 +24,10 @@ export function PrintButton({
   const [error, setError] = useState('');
 
   const paperSize = controlledSize ?? internalSize;
+
+  useEffect(() => {
+    applyPrintPaperSize(paperSize);
+  }, [paperSize]);
 
   const setPaperSize = (next: PaperSize) => {
     setInternalSize(next);

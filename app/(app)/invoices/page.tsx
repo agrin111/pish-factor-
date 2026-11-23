@@ -3,7 +3,13 @@ import { FileText, Plus } from 'lucide-react';
 import type { Prisma, QuotationStatus } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { formatCurrency, formatDocumentNumber } from '@/lib/format';
+import {
+  formatCurrency,
+  formatDocumentNumber,
+  formatNumber,
+  formatPersianText,
+  toPersianDigits,
+} from '@/lib/format';
 import { formatJalali, parseJalaliInput } from '@/lib/jalali';
 import { STATUS_BADGE, STATUS_LABEL, STATUSES } from '@/lib/labels';
 import { effectiveStatus, statusWhere } from '@/lib/quotation-status';
@@ -151,7 +157,7 @@ export default async function InvoicesPage({
             className="input numeric"
             dir="ltr"
             placeholder="۱۴۰۵/۰۸/۰۱"
-            defaultValue={params.from ?? ''}
+            defaultValue={params.from ? toPersianDigits(params.from) : ''}
           />
         </div>
         <div>
@@ -164,7 +170,7 @@ export default async function InvoicesPage({
             className="input numeric"
             dir="ltr"
             placeholder="۱۴۰۵/۰۸/۳۰"
-            defaultValue={params.to ?? ''}
+            defaultValue={params.to ? toPersianDigits(params.to) : ''}
           />
         </div>
         {user.role === 'ADMIN' && (
@@ -190,7 +196,7 @@ export default async function InvoicesPage({
             حذف فیلترها
           </Link>
           <span className="muted mr-auto text-xs numeric">
-            {new Intl.NumberFormat('fa-IR').format(total)} سند
+            {formatNumber(total, 0)} سند
           </span>
         </div>
       </form>
@@ -237,12 +243,12 @@ export default async function InvoicesPage({
                       </Link>
                     </td>
                     <td>
-                      <div className="font-medium">{row.customerName}</div>
+                      <div className="font-medium">{formatPersianText(row.customerName)}</div>
                       {row.customerCompany && (
-                        <div className="muted text-[11px]">{row.customerCompany}</div>
+                        <div className="muted text-[11px]">{formatPersianText(row.customerCompany)}</div>
                       )}
                       <div className="muted numeric text-[11px]" dir="ltr">
-                        {row.customerMobile}
+                        {toPersianDigits(row.customerMobile)}
                       </div>
                     </td>
                     <td className="numeric">{formatJalali(row.issueDate)}</td>
@@ -281,7 +287,7 @@ export default async function InvoicesPage({
               href={buildQuery({ page: String(item) })}
               className={`btn btn-sm ${item === page ? 'btn-navy' : 'btn-secondary'}`}
             >
-              {new Intl.NumberFormat('fa-IR').format(item)}
+              {formatNumber(item, 0)}
             </Link>
           ))}
         </div>

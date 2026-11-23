@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { UsersView } from '@/components/users-view';
+import { toPersianDigits } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,8 +27,10 @@ export default async function UsersPage() {
         phone: user.phone,
         isActive: user.isActive,
         lastLoginLabel: user.lastLoginAt
-          ? new Intl.DateTimeFormat('fa-IR', { dateStyle: 'short', timeStyle: 'short' }).format(
-              user.lastLoginAt,
+          ? toPersianDigits(
+              new Intl.DateTimeFormat('fa-IR', { dateStyle: 'short', timeStyle: 'short' }).format(
+                user.lastLoginAt,
+              ),
             )
           : null,
         quotationCount: user._count.quotations,
@@ -38,10 +41,12 @@ export default async function UsersPage() {
         actorName: log.actorName,
         action: log.action,
         summary: log.summary,
-        createdAtLabel: new Intl.DateTimeFormat('fa-IR', {
-          dateStyle: 'short',
-          timeStyle: 'short',
-        }).format(log.createdAt),
+        createdAtLabel: toPersianDigits(
+          new Intl.DateTimeFormat('fa-IR', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+          }).format(log.createdAt),
+        ),
       }))}
     />
   );

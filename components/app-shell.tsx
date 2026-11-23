@@ -24,7 +24,7 @@ import { UpdateToast } from '@/components/update-toast';
 import { logoutAction } from '@/actions/auth';
 import type { Role } from '@prisma/client';
 import { formatJalaliLong } from '@/lib/jalali';
-import { toPersianDigits } from '@/lib/format';
+import { formatNumber, formatPersianText, toPersianDigits } from '@/lib/format';
 import type { DesktopUpdateState } from '@/types/desktop';
 
 export interface ShellUser {
@@ -111,7 +111,7 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
   };
 
   return (
-    <div className="flex min-h-screen bg-surface">
+    <div className="flex min-h-screen bg-surface print:block print:min-h-0">
       {mobileOpen && (
         <div
           className="fixed inset-0 z-40 bg-ink-950/55 lg:hidden"
@@ -130,7 +130,9 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
             <BrandLogo logoDataUrl={logoDataUrl} size="sm" variant="light" />
             <div className="min-w-0">
               <div className="truncate text-sm font-bold tracking-tight">Aghrin PishFactor</div>
-              <div className="mt-0.5 truncate text-[11px] text-steel-400">{companyName}</div>
+              <div className="mt-0.5 truncate text-[11px] text-steel-400">
+                {formatPersianText(companyName)}
+              </div>
             </div>
           </div>
           <button
@@ -186,7 +188,7 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
                 </span>
                 {count !== undefined && (
                   <span className="numeric rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-steel-300">
-                    {new Intl.NumberFormat('fa-IR').format(count)}
+                    {formatNumber(count, 0)}
                   </span>
                 )}
               </Link>
@@ -280,7 +282,9 @@ export function AppShell({ user, companyName, logoDataUrl, counts, children }: A
           )}
 
           <div className="min-w-0">
-            <div className="truncate text-[13px] font-medium">{user.fullName}</div>
+            <div className="truncate text-[13px] font-medium">
+              {formatPersianText(user.fullName)}
+            </div>
             <div className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-steel-400">
               <span>{isAdmin ? 'مدیر سیستم' : 'کارمند فروش'}</span>
               <span aria-hidden="true">·</span>

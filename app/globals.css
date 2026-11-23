@@ -528,44 +528,302 @@ table.data tbody tr:hover td:first-child {
 }
 
 /* -------------------------------------------------------------------- print */
-@page {
-  size: A4 portrait;
-  margin: 10mm;
-}
-
 @media print {
+  /*
+   * حذف سربرگ و فوتر خودکار مرورگر (تاریخ، عنوان، آدرس صفحه و شماره صفحه)
+   * در مرورگرهای کروم/اج/فایرفاکس/سافاری و Electron با margin: 0 روی @page
+   * همراه با غیرفعال‌سازی جعبه‌های حاشیه استاندارد CSS Paged Media؛
+   * حاشیه استاندارد برگه به‌صورت ثابت (12mm برای A4 و 8mm برای A5) روی ناحیه چاپ اعمال می‌شود.
+   */
+  @page {
+    size: A4 portrait;
+    margin: 0;
+
+    @top-left-corner { content: none !important; display: none !important; }
+    @top-left { content: none !important; display: none !important; }
+    @top-center { content: none !important; display: none !important; }
+    @top-right { content: none !important; display: none !important; }
+    @top-right-corner { content: none !important; display: none !important; }
+    @bottom-left-corner { content: none !important; display: none !important; }
+    @bottom-left { content: none !important; display: none !important; }
+    @bottom-center { content: none !important; display: none !important; }
+    @bottom-right { content: none !important; display: none !important; }
+    @bottom-right-corner { content: none !important; display: none !important; }
+    @left-top { content: none !important; display: none !important; }
+    @left-middle { content: none !important; display: none !important; }
+    @left-bottom { content: none !important; display: none !important; }
+    @right-top { content: none !important; display: none !important; }
+    @right-middle { content: none !important; display: none !important; }
+    @right-bottom { content: none !important; display: none !important; }
+  }
+
+  @page a4 {
+    size: A4 portrait;
+    margin: 0;
+
+    @top-left-corner { content: none !important; display: none !important; }
+    @top-left { content: none !important; display: none !important; }
+    @top-center { content: none !important; display: none !important; }
+    @top-right { content: none !important; display: none !important; }
+    @top-right-corner { content: none !important; display: none !important; }
+    @bottom-left-corner { content: none !important; display: none !important; }
+    @bottom-left { content: none !important; display: none !important; }
+    @bottom-center { content: none !important; display: none !important; }
+    @bottom-right { content: none !important; display: none !important; }
+    @bottom-right-corner { content: none !important; display: none !important; }
+  }
+
+  @page a5 {
+    size: A5 portrait;
+    margin: 0;
+
+    @top-left-corner { content: none !important; display: none !important; }
+    @top-left { content: none !important; display: none !important; }
+    @top-center { content: none !important; display: none !important; }
+    @top-right { content: none !important; display: none !important; }
+    @top-right-corner { content: none !important; display: none !important; }
+    @bottom-left-corner { content: none !important; display: none !important; }
+    @bottom-left { content: none !important; display: none !important; }
+    @bottom-center { content: none !important; display: none !important; }
+    @bottom-right { content: none !important; display: none !important; }
+    @bottom-right-corner { content: none !important; display: none !important; }
+  }
+
   html,
   body {
     background: #fff !important;
     background-image: none !important;
     margin: 0 !important;
     padding: 0 !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    min-height: 0 !important;
+    height: auto !important;
+    font-size: 10pt !important;
+    line-height: 1.6 !important;
+    zoom: 1 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
+
   .no-print {
     display: none !important;
   }
+
   .print-area {
+    page: a4;
+    box-sizing: border-box !important;
+    background: #fff !important;
     box-shadow: none !important;
     border: none !important;
     border-radius: 0 !important;
     margin: 0 !important;
-    padding: 0 !important;
-    max-width: none !important;
+    padding: 12mm !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    overflow: visible !important;
+    font-size: 10pt !important;
+    line-height: 1.6 !important;
+  }
+
+  .print-area .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  .print-area a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+
+  .print-area thead {
+    display: table-header-group;
+  }
+
+  .print-area tfoot {
+    display: table-footer-group;
+  }
+
+  .print-area tr,
+  .print-area .doc-print-sign,
+  .print-area .rounded-lg {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-area table {
     width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 9.2pt !important;
   }
+
+  .print-area th,
+  .print-area td {
+    padding: 4.5pt 5.5pt !important;
+  }
+
+  .print-area .doc-print-title {
+    font-size: 14pt !important;
+    line-height: 1.35 !important;
+  }
+
+  .print-area .doc-print-subtitle {
+    font-size: 11pt !important;
+  }
+
+  .print-area .doc-print-muted {
+    font-size: 8.8pt !important;
+  }
+
+  .print-area .doc-print-total {
+    font-size: 11pt !important;
+  }
+
+  .print-area .doc-print-foot {
+    font-size: 8.2pt !important;
+  }
+
+  .print-area .doc-print-sign {
+    height: 23mm !important;
+  }
+
+  /* استاندارد ثابت برگه A4 (210×297mm با حاشیه ثابت 12mm) */
+  html[data-paper-size='A4'],
+  html[data-paper-size='A4'] body {
+    width: 210mm !important;
+    max-width: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 10pt !important;
+    line-height: 1.6 !important;
+  }
+
+  html[data-paper-size='A4'] .print-area {
+    page: a4;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    margin: 0 !important;
+    padding: 12mm !important;
+    font-size: 10pt !important;
+    line-height: 1.6 !important;
+  }
+
+  /* استاندارد ثابت برگه A5 (148×210mm با حاشیه ثابت 8mm) */
+  html[data-paper-size='A5'],
+  html[data-paper-size='A5'] body {
+    width: 148mm !important;
+    max-width: 148mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 8.5pt !important;
+    line-height: 1.48 !important;
+  }
+
   html[data-paper-size='A5'] .print-area {
-    font-size: 9px !important;
-    line-height: 1.45 !important;
+    page: a5;
+    width: 148mm !important;
+    max-width: 148mm !important;
+    margin: 0 !important;
+    padding: 8mm !important;
+    font-size: 8.5pt !important;
+    line-height: 1.48 !important;
   }
+
   html[data-paper-size='A5'] .print-area table {
-    font-size: 8.25px !important;
+    font-size: 7.8pt !important;
   }
+
   html[data-paper-size='A5'] .print-area th,
   html[data-paper-size='A5'] .print-area td {
-    padding: 3px 4px !important;
+    padding: 3pt 3.5pt !important;
   }
+
+  html[data-paper-size='A5'] .print-area .p-4 {
+    padding: 6pt 8pt !important;
+  }
+
+  html[data-paper-size='A5'] .print-area .p-3,
+  html[data-paper-size='A5'] .print-area .p-2\.5 {
+    padding: 5pt 7pt !important;
+  }
+
+  html[data-paper-size='A5'] .print-area .mt-3 {
+    margin-top: 6pt !important;
+  }
+
+  html[data-paper-size='A5'] .print-area .gap-3,
+  html[data-paper-size='A5'] .print-area .gap-4 {
+    gap: 6pt !important;
+  }
+
+  html[data-paper-size='A5'] .print-area .gap-6 {
+    gap: 8pt !important;
+  }
+
+  html[data-paper-size='A5'] .print-area .h-12.w-12 {
+    width: 28pt !important;
+    height: 28pt !important;
+    font-size: 11pt !important;
+  }
+
+  html[data-paper-size='A5'] .print-area .doc-print-title {
+    font-size: 11.5pt !important;
+  }
+
+  html[data-paper-size='A5'] .print-area .doc-print-subtitle {
+    font-size: 9.5pt !important;
+  }
+
+  html[data-paper-size='A5'] .print-area .doc-print-muted {
+    font-size: 7.5pt !important;
+  }
+
+  html[data-paper-size='A5'] .print-area .doc-print-total {
+    font-size: 9.2pt !important;
+  }
+
+  html[data-paper-size='A5'] .print-area .doc-print-foot {
+    font-size: 7pt !important;
+  }
+
+  html[data-paper-size='A5'] .print-area .doc-print-sign {
+    height: 17mm !important;
+  }
+
+  html[data-paper-size='A5'] .letterhead-paper .h-16.w-16 {
+    width: 34pt !important;
+    height: 34pt !important;
+    font-size: 13pt !important;
+  }
+
+  html[data-paper-size='A5'] .letterhead-paper .pb-4 {
+    padding-bottom: 6pt !important;
+  }
+
+  html[data-paper-size='A5'] .letterhead-paper .mt-5,
+  html[data-paper-size='A5'] .letterhead-paper .mt-8 {
+    margin-top: 8pt !important;
+  }
+
+  html[data-paper-size='A5'] .letterhead-paper .pt-3 {
+    padding-top: 5pt !important;
+  }
+
+  html[data-paper-size='A5'] .letterhead-paper .letterhead-lines {
+    margin-top: 10pt !important;
+    gap: 0 !important;
+  }
+
+  html[data-paper-size='A5'] .letterhead-paper .letterhead-line {
+    height: 17pt !important;
+  }
+
+  html[data-paper-size='A5'] .letterhead-paper .letterhead-line:nth-child(n + 11) {
+    display: none !important;
+  }
+
+  .print-area,
   .print-area * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

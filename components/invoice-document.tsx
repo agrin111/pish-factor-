@@ -3,6 +3,8 @@ import {
   formatCurrency,
   formatDocumentNumber,
   formatNumber,
+  formatPersianText,
+  toPersianDigits,
 } from '@/lib/format';
 import { formatJalali } from '@/lib/jalali';
 import { STATUS_LABEL, UNIT_LABEL } from '@/lib/labels';
@@ -95,16 +97,27 @@ export function InvoiceDocument({ quotation, company }: Props) {
               </span>
             )}
             <div>
-              <div className="text-base font-extrabold">{letterhead.companyName}</div>
-              {letterhead.subtitle && <div className="muted text-[10px]">{letterhead.subtitle}</div>}
-              <div className="muted numeric mt-0.5 text-[10px]">
-                {[letterhead.phone, letterhead.website].filter(Boolean).join(' | ') || 'اطلاعات تماس ثبت نشده'}
+              <div className="doc-print-title text-base font-extrabold">
+                {formatPersianText(letterhead.companyName)}
+              </div>
+              {letterhead.subtitle && (
+                <div className="muted doc-print-muted text-[10px]">
+                  {formatPersianText(letterhead.subtitle)}
+                </div>
+              )}
+              <div className="muted numeric doc-print-muted mt-0.5 text-[10px]">
+                {[
+                  letterhead.phone ? toPersianDigits(letterhead.phone) : null,
+                  letterhead.website,
+                ]
+                  .filter(Boolean)
+                  .join(' | ') || 'اطلاعات تماس ثبت نشده'}
               </div>
             </div>
           </div>
 
-          <div className="space-y-0.5 border-line text-left sm:border-r sm:pr-5 print:border-r print:pr-5">
-            <div className="text-sm font-bold">پیش‌فاکتور فروش کالا</div>
+          <div className="space-y-0.5 border-line text-right sm:border-r sm:pr-5 print:border-r print:pr-5">
+            <div className="doc-print-subtitle text-sm font-bold">پیش‌فاکتور فروش کالا</div>
             <div>
               شماره:{' '}
               <span className="numeric font-bold">
@@ -115,7 +128,9 @@ export function InvoiceDocument({ quotation, company }: Props) {
             <div className="numeric">
               اعتبار تا: {formatJalali(quotation.validUntil)} ({formatNumber(quotation.validDays, 0)} روز)
             </div>
-            <div className="text-[10px] text-steel-600">وضعیت: {STATUS_LABEL[quotation.status]}</div>
+            <div className="doc-print-muted text-[10px] text-steel-600">
+              وضعیت: {STATUS_LABEL[quotation.status]}
+            </div>
           </div>
         </div>
 
@@ -123,51 +138,59 @@ export function InvoiceDocument({ quotation, company }: Props) {
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 print:grid-cols-2">
           <div className="rounded-lg border border-line p-3">
             <div className="mb-1.5 border-b border-line pb-1.5 font-bold">مشخصات فروشنده</div>
-            <div>نام شرکت / فروشنده: {letterhead.companyName}</div>
+            <div>نام شرکت / فروشنده: {formatPersianText(letterhead.companyName)}</div>
             {(letterhead.nationalId || letterhead.economicCode || letterhead.registrationNo || !isMisc) && (
               <div className="numeric">
-                شناسه ملی: {letterhead.nationalId || 'تنظیم نشده'} · کد اقتصادی:{' '}
-                {letterhead.economicCode || 'تنظیم نشده'}
-                {letterhead.registrationNo ? ` · شماره ثبت: ${letterhead.registrationNo}` : ''}
+                شناسه ملی: {letterhead.nationalId ? toPersianDigits(letterhead.nationalId) : 'تنظیم نشده'} · کد اقتصادی:{' '}
+                {letterhead.economicCode ? toPersianDigits(letterhead.economicCode) : 'تنظیم نشده'}
+                {letterhead.registrationNo
+                  ? ` · شماره ثبت: ${toPersianDigits(letterhead.registrationNo)}`
+                  : ''}
               </div>
             )}
             <div className="numeric">
               تلفن:{' '}
-              {[letterhead.phone, letterhead.secondaryPhone].filter(Boolean).join(' · ') ||
-                'تنظیم نشده'}
+              {[letterhead.phone, letterhead.secondaryPhone]
+                .filter(Boolean)
+                .map((p) => toPersianDigits(p!))
+                .join(' · ') || 'تنظیم نشده'}
               {letterhead.email ? ` · ایمیل: ${letterhead.email}` : ''}
             </div>
-            <div>نشانی: {letterhead.address || 'تنظیم نشده'}</div>
+            <div>نشانی: {letterhead.address ? formatPersianText(letterhead.address) : 'تنظیم نشده'}</div>
           </div>
 
           <div className="rounded-lg border border-line p-3">
             <div className="mb-1.5 border-b border-line pb-1.5 font-bold">مشخصات خریدار</div>
-            <div>نام مشتری: {quotation.customerName}</div>
-            {quotation.customerCompany && <div>شرکت / پروژه: {quotation.customerCompany}</div>}
+            <div>نام مشتری: {formatPersianText(quotation.customerName)}</div>
+            {quotation.customerCompany && (
+              <div>شرکت / پروژه: {formatPersianText(quotation.customerCompany)}</div>
+            )}
             <div className="numeric">
-              موبایل: <span dir="ltr">{quotation.customerMobile}</span>
+              موبایل: <span dir="ltr">{toPersianDigits(quotation.customerMobile)}</span>
               {quotation.customerPhone ? (
                 <>
                   {' '}
-                  · تلفن دوم: <span dir="ltr">{quotation.customerPhone}</span>
+                  · تلفن دوم: <span dir="ltr">{toPersianDigits(quotation.customerPhone)}</span>
                 </>
               ) : null}
             </div>
             {(quotation.customerNationalId || quotation.customerEconomicCode) && (
               <div className="numeric">
                 {quotation.customerNationalId
-                  ? `شناسه / کد ملی: ${quotation.customerNationalId}`
+                  ? `شناسه / کد ملی: ${toPersianDigits(quotation.customerNationalId)}`
                   : ''}
                 {quotation.customerNationalId && quotation.customerEconomicCode ? ' · ' : ''}
                 {quotation.customerEconomicCode
-                  ? `کد اقتصادی: ${quotation.customerEconomicCode}`
+                  ? `کد اقتصادی: ${toPersianDigits(quotation.customerEconomicCode)}`
                   : ''}
               </div>
             )}
             <div>
               نشانی:{' '}
-              {[quotation.customerCity, quotation.customerAddress].filter(Boolean).join(' — ') ||
-                '—'}
+              {[quotation.customerCity, quotation.customerAddress]
+                .filter(Boolean)
+                .map((part) => formatPersianText(part))
+                .join(' — ') || '—'}
             </div>
           </div>
         </div>
@@ -177,43 +200,43 @@ export function InvoiceDocument({ quotation, company }: Props) {
           <table className="w-full border-collapse text-[10px]">
             <thead>
               <tr className="bg-surface-2">
-                <th className="border-l border-line px-1.5 py-2 text-center">ردیف</th>
-                <th className="border-l border-line px-1.5 py-2 text-right">نام کالا</th>
-                <th className="border-l border-line px-1.5 py-2 text-right">مشخصات</th>
-                <th className="border-l border-line px-1.5 py-2 text-center">سایز</th>
-                <th className="border-l border-line px-1.5 py-2 text-center">واحد</th>
-                <th className="border-l border-line px-1.5 py-2 text-left">مقدار</th>
-                <th className="border-l border-line px-1.5 py-2 text-left">قیمت واحد</th>
+                <th className="border-l border-line print:border-steel-300 px-1.5 py-2 text-center">ردیف</th>
+                <th className="border-l border-line print:border-steel-300 px-1.5 py-2 text-right">نام کالا</th>
+                <th className="border-l border-line print:border-steel-300 px-1.5 py-2 text-right">مشخصات</th>
+                <th className="border-l border-line print:border-steel-300 px-1.5 py-2 text-center">سایز</th>
+                <th className="border-l border-line print:border-steel-300 px-1.5 py-2 text-center">واحد</th>
+                <th className="border-l border-line print:border-steel-300 px-1.5 py-2 text-left">مقدار</th>
+                <th className="border-l border-line print:border-steel-300 px-1.5 py-2 text-left">قیمت واحد</th>
                 <th className="px-1.5 py-2 text-left">مبلغ کل</th>
               </tr>
             </thead>
             <tbody>
               {quotation.items.map((item) => (
-                <tr key={item.id} className="border-t border-line">
-                  <td className="border-l border-line px-1.5 py-1.5 text-center numeric">
+                <tr key={item.id} className="border-t border-line print:border-steel-300">
+                  <td className="border-l border-line print:border-steel-300 px-1.5 py-1.5 text-center numeric">
                     {formatNumber(item.rowIndex, 0)}
                   </td>
-                  <td className="border-l border-line px-1.5 py-1.5 font-semibold">
-                    {item.productName}
+                  <td className="border-l border-line print:border-steel-300 px-1.5 py-1.5 font-semibold">
+                    {formatPersianText(item.productName)}
                     {item.sku && (
-                      <div className="muted numeric mt-0.5 text-[9px] font-normal" dir="ltr">
-                        کد: {item.sku}
+                      <div className="muted numeric doc-print-foot mt-0.5 text-[9px] font-normal" dir="ltr">
+                        کد: {toPersianDigits(item.sku)}
                       </div>
                     )}
                   </td>
-                  <td className="border-l border-line px-1.5 py-1.5 text-steel-600">
-                    {item.specs || '—'}
+                  <td className="border-l border-line print:border-steel-300 px-1.5 py-1.5 text-steel-600">
+                    {item.specs ? formatPersianText(item.specs) : '—'}
                   </td>
-                  <td className="border-l border-line px-1.5 py-1.5 text-center">
-                    {item.size || '—'}
+                  <td className="border-l border-line print:border-steel-300 px-1.5 py-1.5 text-center">
+                    {item.size ? formatPersianText(item.size) : '—'}
                   </td>
-                  <td className="border-l border-line px-1.5 py-1.5 text-center">
+                  <td className="border-l border-line print:border-steel-300 px-1.5 py-1.5 text-center">
                     {UNIT_LABEL[item.unit]}
                   </td>
-                  <td className="border-l border-line px-1.5 py-1.5 text-left numeric">
+                  <td className="border-l border-line print:border-steel-300 px-1.5 py-1.5 text-left numeric">
                     {formatNumber(item.quantity, 3)}
                   </td>
-                  <td className="border-l border-line px-1.5 py-1.5 text-left numeric">
+                  <td className="border-l border-line print:border-steel-300 px-1.5 py-1.5 text-left numeric">
                     {formatNumber(item.unitPrice, 0)}
                   </td>
                   <td className="px-1.5 py-1.5 text-left font-bold numeric">
@@ -229,10 +252,10 @@ export function InvoiceDocument({ quotation, company }: Props) {
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-12 print:grid-cols-12">
           <div className="rounded-lg border border-line p-3 sm:col-span-7 print:col-span-7">
             <div className="mb-1 font-bold">شرایط پرداخت، تحویل و توضیحات</div>
-            <div>شرایط پرداخت: {quotation.paymentTerms || '—'}</div>
-            <div>شرایط تحویل: {quotation.deliveryTerms || '—'}</div>
-            {letterhead.bankInfo && <div>اطلاعات بانکی: {letterhead.bankInfo}</div>}
-            {quotation.notes && <div>توضیحات: {quotation.notes}</div>}
+            <div>شرایط پرداخت: {quotation.paymentTerms ? formatPersianText(quotation.paymentTerms) : '—'}</div>
+            <div>شرایط تحویل: {quotation.deliveryTerms ? formatPersianText(quotation.deliveryTerms) : '—'}</div>
+            {letterhead.bankInfo && <div>اطلاعات بانکی: {formatPersianText(letterhead.bankInfo)}</div>}
+            {quotation.notes && <div>توضیحات: {formatPersianText(quotation.notes)}</div>}
           </div>
 
           <div className="rounded-lg border border-ink-900 bg-surface-2/50 p-3 sm:col-span-5 print:col-span-5">
@@ -260,38 +283,40 @@ export function InvoiceDocument({ quotation, company }: Props) {
                 <span>{formatNumber(quotation.totalWeightKg ?? 0, 2)} کیلوگرم</span>
               </div>
             )}
-            <div className="mt-1.5 flex items-center justify-between border-t-2 border-ink-900 pt-1.5 text-xs font-extrabold numeric">
+            <div className="doc-print-total mt-1.5 flex items-center justify-between border-t-2 border-ink-900 pt-1.5 text-xs font-extrabold numeric">
               <span>مبلغ نهایی</span>
               <span>{formatCurrency(quotation.grandTotal, quotation.currency)}</span>
             </div>
-            <p className="mt-1 text-[10px] leading-relaxed">
+            <p className="doc-print-muted mt-1 text-[10px] leading-relaxed">
               به حروف: {amountInWords(quotation.grandTotal, quotation.currency)}
             </p>
           </div>
         </div>
 
         {company.disclaimerText && (
-          <div className="mt-3 rounded-lg border border-line bg-surface-2/40 p-2.5 text-[10px] text-steel-600">
+          <div className="doc-print-muted mt-3 rounded-lg border border-line bg-surface-2/40 p-2.5 text-[10px] text-steel-600">
             <span className="font-semibold">سلب مسئولیت و شرایط اعتبار: </span>
-            {company.disclaimerText}
+            {formatPersianText(company.disclaimerText)}
           </div>
         )}
 
         <div className="mt-3 grid grid-cols-2 gap-6">
-          <div className="flex h-24 flex-col justify-between rounded-lg border border-line p-3 text-center">
+          <div className="doc-print-sign flex h-24 flex-col justify-between rounded-lg border border-line p-3 text-center">
             <div className="font-semibold">مهر و امضای فروشنده</div>
-            <div className="muted text-[10px]">صادرکننده: {quotation.createdByName}</div>
+            <div className="muted doc-print-muted text-[10px]">
+              صادرکننده: {formatPersianText(quotation.createdByName)}
+            </div>
           </div>
-          <div className="flex h-24 flex-col justify-between rounded-lg border border-line p-3 text-center">
+          <div className="doc-print-sign flex h-24 flex-col justify-between rounded-lg border border-line p-3 text-center">
             <div className="font-semibold">مهر و امضای خریدار</div>
-            <div className="muted text-[10px]">تأیید مبالغ و شرایط پیش‌فاکتور</div>
+            <div className="muted doc-print-muted text-[10px]">تأیید مبالغ و شرایط پیش‌فاکتور</div>
           </div>
         </div>
 
-        <div className="muted mt-3 border-t border-line pt-2 text-[9px]">
-          {letterhead.companyName}
-          {letterhead.phone ? ` — ${letterhead.phone}` : ''}
-          {letterhead.address ? ` — ${letterhead.address}` : ''} · واحد پول: {currency}
+        <div className="muted doc-print-foot mt-3 border-t border-line pt-2 text-[9px]">
+          {formatPersianText(letterhead.companyName)}
+          {letterhead.phone ? ` — تلفن: ${toPersianDigits(letterhead.phone)}` : ''}
+          {letterhead.website ? ` — ${letterhead.website}` : ''} · واحد پول: {currency}
         </div>
       </div>
     </div>
