@@ -47,10 +47,15 @@ export function fa(text: string | null | undefined): string {
 void bidi;
 void ArabicShaper;
 
-const NAVY = '#172535';
-const GREEN = '#347C65';
-const GRAY = '#D7DEE5';
-const MUTED = '#5B6B7B';
+// هر مقدار دقیقاً برابر یک توکن پالت رابط کاربری است (app/globals.css → @theme)؛
+// PDFKit رنگ CSS نمی‌فهمد، پس همان کدهای hex تکرار می‌شوند.
+const NAVY = '#0f1a24'; // ink-900 — سربرگ، جدول، عنوان
+const BODY = '#16232f'; // ink-800 — متن بدنه جدول و شرایط
+const ACCENT = '#a85d2c'; // accent-600 — کاشی لوگوی جایگزین
+const GRAY = '#dfe5ea'; // line — کادرها و خطوط
+const MUTED = '#5f6d78'; // steel-500 — متن کم‌اهمیت
+const SURFACE = '#f4f6f7'; // surface — پس‌زمینه جعبه‌ها
+const RULE = '#35454f'; // steel-700 — جداکننده ستون‌های هدر جدول
 
 export type PaperSize = 'A4' | 'A5';
 
@@ -187,10 +192,10 @@ export async function renderQuotationPdf(
         align: 'center',
       });
     } catch {
-      doc.roundedRect(logoX, headerTop + (isA5 ? 15 : 18), logoBoxW, logoBoxH - 4, 8).fillColor(GREEN).fill();
+      doc.roundedRect(logoX, headerTop + (isA5 ? 15 : 18), logoBoxW, logoBoxH - 4, 8).fillColor(ACCENT).fill();
     }
   } else {
-    doc.roundedRect(logoX, headerTop + (isA5 ? 15 : 18), logoBoxW, logoBoxH - 4, 8).fillColor(GREEN).fill();
+    doc.roundedRect(logoX, headerTop + (isA5 ? 15 : 18), logoBoxW, logoBoxH - 4, 8).fillColor(ACCENT).fill();
     doc
       .font('faBold')
       .fontSize(isA5 ? 15 : 20)
@@ -208,7 +213,7 @@ export async function renderQuotationPdf(
   const metaH = headerH - (isA5 ? 14 : 20);
   doc
     .roundedRect(metaX - (isA5 ? 4 : 6), headerTop + (isA5 ? 7 : 10), metaW, metaH, 5)
-    .fillColor('#F1F3F5')
+    .fillColor(SURFACE)
     .fill();
   doc.font('faBold').fontSize(isA5 ? 8.2 : 10).fillColor(NAVY);
   text('پیش‌فاکتور فروش کالا', metaX, headerTop + (isA5 ? 11 : 16), {
@@ -304,7 +309,7 @@ export async function renderQuotationPdf(
 
   const drawInfoBox = (x: number, title: string, rows: [string, string][]) => {
     doc.roundedRect(x, y, boxW, boxH, 5).lineWidth(0.8).strokeColor(GRAY).stroke();
-    doc.roundedRect(x, y, boxW, isA5 ? 16 : 20, 5).fillColor('#F1F3F5').fill();
+    doc.roundedRect(x, y, boxW, isA5 ? 16 : 20, 5).fillColor(SURFACE).fill();
     doc.font('faBold').fontSize(isA5 ? 7.2 : 8.5).fillColor(NAVY);
     text(title, x + 6, y + (isA5 ? 4.5 : 6), { width: boxW - 12, align: 'right' });
     doc.font('fa').fontSize(isA5 ? 6.6 : 8);
@@ -343,7 +348,7 @@ export async function renderQuotationPdf(
         .moveTo(x, top)
         .lineTo(x, top + rowH)
         .lineWidth(0.4)
-        .strokeColor('#3C4E62')
+        .strokeColor(RULE)
         .stroke();
     }
     return top + rowH;
@@ -395,7 +400,7 @@ export async function renderQuotationPdf(
       doc
         .font(col.key === 'name' ? 'faMedium' : 'fa')
         .fontSize(tableFontSize)
-        .fillColor(col.key === 'total' ? NAVY : '#25313D');
+        .fillColor(col.key === 'total' ? NAVY : BODY);
       text(cellTexts[col.key] || '—', x + cellPad / 2, tableY + (isA5 ? 3 : 4), {
         width: col.width - cellPad,
         align: col.align,
@@ -500,7 +505,7 @@ export async function renderQuotationPdf(
     width: termsW - 14,
     align: 'right',
   });
-  doc.font('fa').fontSize(termsFontSize).fillColor('#25313D');
+  doc.font('fa').fontSize(termsFontSize).fillColor(BODY);
   text(termsText.join('\n'), totalsX + totalsW + termsGap + 7, y + (isA5 ? 18 : 22), {
     width: termsW - 14,
     align: 'right',
@@ -510,7 +515,7 @@ export async function renderQuotationPdf(
 
   // مبلغ به حروف
   const wordsH = isA5 ? 22 : 26;
-  doc.roundedRect(MARGIN, y, CONTENT_W, wordsH, 4).fillColor('#F1F3F5').fill();
+  doc.roundedRect(MARGIN, y, CONTENT_W, wordsH, 4).fillColor(SURFACE).fill();
   doc.font('faMedium').fontSize(isA5 ? 7 : 8.5).fillColor(NAVY);
   text(
     `مبلغ نهایی به حروف: ${amountInWords(quotation.grandTotal, quotation.currency)}`,
