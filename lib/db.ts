@@ -605,10 +605,11 @@ function createModelDelegate(table: keyof MockStore, store: MockStore) {
       if (before !== store[table].length) persistMockStore(store);
       return { count: before - store[table].length };
     },
-    groupBy: async (args: { by: string[]; _count?: { _all?: boolean } }) => {
+    groupBy: async (args: { by: string[]; where?: Row; _count?: { _all?: boolean } }) => {
       const field = args.by[0];
       const counts = new Map<unknown, number>();
-      for (const row of store[table]) {
+      const filtered = store[table].filter((r) => matchesWhere(r, args.where));
+      for (const row of filtered) {
         const val = row[field];
         counts.set(val, (counts.get(val) ?? 0) + 1);
       }

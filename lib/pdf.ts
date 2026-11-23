@@ -53,6 +53,7 @@ const NAVY = '#0f1a24'; // ink-900 — سربرگ، جدول، عنوان
 const BODY = '#16232f'; // ink-800 — متن بدنه جدول و شرایط
 const ACCENT = '#a85d2c'; // accent-600 — کاشی لوگوی جایگزین
 const GRAY = '#dfe5ea'; // line — کادرها و خطوط
+const TABLE_GRID = '#b9c4cc'; // steel-300 — خطوط جدول برای وضوح در چاپ
 const MUTED = '#5f6d78'; // steel-500 — متن کم‌اهمیت
 const SURFACE = '#f4f6f7'; // surface — پس‌زمینه جعبه‌ها
 const RULE = '#35454f'; // steel-700 — جداکننده ستون‌های هدر جدول
@@ -165,7 +166,7 @@ export async function renderQuotationPdf(
       `${letterhead.companyName} — ${letterhead.phone ?? 'تلفن ثبت نشده'} — ${letterhead.address ?? 'نشانی ثبت نشده'}`,
       MARGIN,
       y,
-      { width: CONTENT_W, align: 'right', height: isA5 ? 11 : 14, ellipsis: true },
+      { width: CONTENT_W, align: 'right', height: isA5 ? 11 : 14, ellipsis: true, lineBreak: false },
     );
   };
 
@@ -240,31 +241,44 @@ export async function renderQuotationPdf(
   const headerTextRight = logoX - (isA5 ? 10 : 14);
   const headerTextW = Math.max(80, headerTextRight - headerTextLeft);
 
-  doc.font('faBold').fontSize(isA5 ? 12.5 : 17).fillColor(NAVY);
-  text(letterhead.companyName, headerTextLeft, headerTop + (isA5 ? 12 : 16), {
+  doc.font('faBold').fontSize(isA5 ? 12 : 16.5).fillColor(NAVY);
+  text(letterhead.companyName, headerTextLeft, headerTop + (isA5 ? 10 : 13), {
     width: headerTextW,
     align: 'right',
+    height: isA5 ? 16 : 22,
+    ellipsis: true,
+    lineBreak: false,
   });
-  doc.font('fa').fontSize(isA5 ? 6.8 : 8.5).fillColor(MUTED);
-  text(
-    [letterhead.subtitle, letterhead.phone ? `تلفن: ${letterhead.phone}` : null, letterhead.website]
+
+  const headerLines = [
+    letterhead.subtitle,
+    [letterhead.phone ? `تلفن: ${letterhead.phone}` : null, letterhead.website]
       .filter(Boolean)
-      .join('  |  ') || 'اطلاعات سربرگ در بخش تنظیمات قابل ویرایش است.',
-    headerTextLeft,
-    headerTop + (isA5 ? 31 : 40),
-    { width: headerTextW, align: 'right' },
-  );
-  text(
+      .join('  |  '),
     [
       letterhead.nationalId ? `شناسه ملی: ${letterhead.nationalId}` : null,
       letterhead.economicCode ? `کد اقتصادی: ${letterhead.economicCode}` : null,
     ]
       .filter(Boolean)
       .join('  |  '),
-    headerTextLeft,
-    headerTop + (isA5 ? 47 : 58),
-    { width: headerTextW, align: 'right' },
-  );
+  ].filter((line): line is string => Boolean(line && line.trim()));
+
+  if (headerLines.length === 0) {
+    headerLines.push('اطلاعات سربرگ در بخش تنظیمات قابل ویرایش است.');
+  }
+
+  const headerLineStep = isA5 ? 12 : 15;
+  const headerLinesStartY = headerTop + (isA5 ? 28 : 37);
+  doc.font('fa').fontSize(isA5 ? 6.8 : 8.5).fillColor(MUTED);
+  headerLines.slice(0, 3).forEach((line, idx) => {
+    text(line, headerTextLeft, headerLinesStartY + idx * headerLineStep, {
+      width: headerTextW,
+      align: 'right',
+      height: headerLineStep,
+      ellipsis: true,
+      lineBreak: false,
+    });
+  });
 
   // ------------------------------------------------------------- buyer/seller
   let y = headerTop + headerH + (isA5 ? 8 : 12);
@@ -312,18 +326,30 @@ export async function renderQuotationPdf(
     doc.roundedRect(x, y, boxW, isA5 ? 16 : 20, 5).fillColor(SURFACE).fill();
     doc.font('faBold').fontSize(isA5 ? 7.2 : 8.5).fillColor(NAVY);
     text(title, x + 6, y + (isA5 ? 4.5 : 6), { width: boxW - 12, align: 'right' });
-    doc.font('fa').fontSize(isA5 ? 6.6 : 8);
+    const infoFontSize = isA5 ? 6.6 : 8;
+    doc.font('fa').fontSize(infoFontSize);
+    const maxLabelW = rows.reduce((max, [label]) => {
+      const w = doc.widthOfString(fa(`${label}:`));
+      return Math.max(max, w);
+    }, 0);
+    const labelW = Math.min(Math.max(isA5 ? 46 : 58, Math.ceil(maxLabelW) + 8), boxW * 0.45);
     let rowY = y + (isA5 ? 21 : 26);
-    const labelW = isA5 ? 46 : 58;
     for (const [label, value] of rows) {
       doc.fillColor(MUTED);
-      text(`${label}:`, x + 6, rowY, { width: labelW, align: 'right' });
+      text(`${label}:`, x + 6, rowY, {
+        width: labelW,
+        align: 'right',
+        height: rowStep,
+        ellipsis: true,
+        lineBreak: false,
+      });
       doc.fillColor(NAVY);
-      text(value || '—', x + labelW + 6, rowY, {
-        width: boxW - labelW - 14,
+      text(value || '—', x + labelW + 8, rowY, {
+        width: boxW - labelW - 16,
         align: 'right',
         ellipsis: true,
         height: rowStep,
+        lineBreak: false,
       });
       rowY += rowStep;
     }
@@ -392,7 +418,7 @@ export async function renderQuotationPdf(
     }
 
     doc.rect(MARGIN, tableY, CONTENT_W, rowH).fillColor('#FFFFFF').fill();
-    doc.rect(MARGIN, tableY, CONTENT_W, rowH).lineWidth(0.4).strokeColor(GRAY).stroke();
+    doc.rect(MARGIN, tableY, CONTENT_W, rowH).lineWidth(0.6).strokeColor(TABLE_GRID).stroke();
 
     let x = PAGE_W - MARGIN;
     for (const col of COLUMNS) {
@@ -408,8 +434,8 @@ export async function renderQuotationPdf(
       doc
         .moveTo(x, tableY)
         .lineTo(x, tableY + rowH)
-        .lineWidth(0.4)
-        .strokeColor(GRAY)
+        .lineWidth(0.6)
+        .strokeColor(TABLE_GRID)
         .stroke();
     }
     tableY += rowH;
