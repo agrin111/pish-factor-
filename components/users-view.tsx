@@ -13,6 +13,8 @@ import { initialActionState } from '@/lib/forms';
 import { Modal } from '@/components/modal';
 import { SubmitButton } from '@/components/submit-button';
 import { ROLE_LABEL } from '@/lib/labels';
+import { formatNumber } from '@/lib/format';
+import { PageHeader } from '@/components/ui/page-header';
 
 interface UserRow {
   id: string;
@@ -99,25 +101,23 @@ export function UsersView({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold">کاربران و لاگ فعالیت</h1>
-          <p className="muted mt-1 text-xs">
-            مدیریت دسترسی مدیر سیستم و کارمند فروش؛ همه عملیات مهم در Audit Log ثبت می‌شود.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => {
-            setDismissedCreate(createState);
-            setCreateOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          ایجاد کاربر جدید
-        </button>
-      </div>
+      <PageHeader
+        title="کاربران و لاگ فعالیت"
+        description="مدیریت دسترسی مدیر سیستم و کارمند فروش؛ همه عملیات مهم در Audit Log ثبت می‌شود."
+        actions={
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              setDismissedCreate(createState);
+              setCreateOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            ایجاد کاربر جدید
+          </button>
+        }
+      />
 
       <div className="table-wrap">
         <table className="data">
@@ -161,8 +161,8 @@ export function UsersView({
                     <span className="badge badge-red">غیرفعال</span>
                   )}
                 </td>
-                <td className="numeric">{user.quotationCount}</td>
-                <td className="numeric">{user.customerCount}</td>
+                <td className="numeric">{formatNumber(user.quotationCount, 0)}</td>
+                <td className="numeric">{formatNumber(user.customerCount, 0)}</td>
                 <td className="numeric text-xs">{user.lastLoginLabel ?? '—'}</td>
                 <td>
                   <div className="row-actions">
@@ -197,14 +197,14 @@ export function UsersView({
       </div>
 
       <div className="card">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D7DEE5] px-5 py-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3.5">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-[#347C65]" />
+            <ShieldCheck className="h-4 w-4 text-accent-600" />
             <h2 className="section-title">تاریخچه فعالیت‌ها (Audit Log)</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-[200px]">
-              <Search className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-steel-400" />
               <input
                 value={logQuery}
                 onChange={(event) => setLogQuery(event.target.value)}
@@ -273,8 +273,8 @@ export function UsersView({
             <div
               className={`rounded-lg border p-2.5 text-xs ${
                 visibleCreateState.ok
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-rose-200 bg-rose-50 text-rose-800'
+                  ? 'alert-success'
+                  : 'alert-danger'
               }`}
             >
               {visibleCreateState.message}
@@ -332,7 +332,7 @@ export function UsersView({
               <input id="new-phone" name="phone" className="input" dir="ltr" />
             </div>
           </div>
-          <div className="flex justify-end gap-2 border-t border-[#D7DEE5] pt-3">
+          <div className="flex justify-end gap-2 border-t border-line pt-3">
             <button type="button" className="btn btn-secondary" onClick={() => setCreateOpen(false)}>
               انصراف
             </button>
@@ -353,8 +353,8 @@ export function UsersView({
               <div
                 className={`rounded-lg border p-2.5 text-xs ${
                   visibleUpdateState.ok
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                    : 'border-rose-200 bg-rose-50 text-rose-800'
+                    ? 'alert-success'
+                    : 'alert-danger'
                 }`}
               >
                 {visibleUpdateState.message}
@@ -408,7 +408,7 @@ export function UsersView({
             <p className="field-hint">
               برای غیرفعال‌کردن، تیک را بردارید؛ در این حالت همه نشست‌های کاربر باطل می‌شود.
             </p>
-            <div className="flex justify-end gap-2 border-t border-[#D7DEE5] pt-3">
+            <div className="flex justify-end gap-2 border-t border-line pt-3">
               <button type="button" className="btn btn-secondary" onClick={() => setEditing(null)}>
                 انصراف
               </button>
@@ -430,8 +430,8 @@ export function UsersView({
               <div
                 className={`rounded-lg border p-2.5 text-xs ${
                   visiblePasswordState.ok
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                    : 'border-rose-200 bg-rose-50 text-rose-800'
+                    ? 'alert-success'
+                    : 'alert-danger'
                 }`}
               >
                 {visiblePasswordState.message}
@@ -471,7 +471,7 @@ export function UsersView({
                 <p className="field-error">{visiblePasswordState.errors.confirm[0]}</p>
               )}
             </div>
-            <div className="flex justify-end gap-2 border-t border-[#D7DEE5] pt-3">
+            <div className="flex justify-end gap-2 border-t border-line pt-3">
               <button type="button" className="btn btn-secondary" onClick={() => setPasswordFor(null)}>
                 انصراف
               </button>

@@ -6,6 +6,7 @@ import { loadReport } from '@/lib/reports';
 import { formatCurrency, formatDocumentNumber, formatNumber } from '@/lib/format';
 import { formatJalali, jalaliToDate, parseJalaliInput, toJalali, todayUtc } from '@/lib/jalali';
 import { STATUS_BADGE, STATUS_LABEL } from '@/lib/labels';
+import { PageHeader } from '@/components/ui/page-header';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,20 +45,22 @@ export default async function ReportsPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold">گزارش‌های فروش</h1>
-          <p className="muted mt-1 text-xs">
+      <PageHeader
+        title="گزارش‌های فروش"
+        description={
+          <>
             بازه <span className="numeric">{formatJalali(from)}</span> تا{' '}
             <span className="numeric">{formatJalali(to)}</span>
             {user.role === 'SALES' ? ' — فقط اسناد شما' : ' — تمام کاربران'}
-          </p>
-        </div>
-        <Link href={`/api/reports/export?${exportQuery}`} className="btn btn-navy">
-          <Download className="h-4 w-4" />
-          خروجی Excel (CSV)
-        </Link>
-      </div>
+          </>
+        }
+        actions={
+          <Link href={`/api/reports/export?${exportQuery}`} className="btn btn-secondary">
+            <Download className="h-4 w-4" />
+            خروجی Excel (CSV)
+          </Link>
+        }
+      />
 
       <form className="card card-pad flex flex-wrap items-end gap-3" method="get">
         <div>
@@ -94,7 +97,7 @@ export default async function ReportsPage({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="card">
-          <div className="border-b border-[#D7DEE5] px-5 py-3.5">
+          <div className="border-b border-line px-5 py-3.5">
             <h2 className="section-title">گزارش ماهانه</h2>
           </div>
           {report.monthly.length === 0 ? (
@@ -122,7 +125,7 @@ export default async function ReportsPage({
         </div>
 
         <div className="card">
-          <div className="border-b border-[#D7DEE5] px-5 py-3.5">
+          <div className="border-b border-line px-5 py-3.5">
             <h2 className="section-title">عملکرد کاربران</h2>
           </div>
           {report.users.length === 0 ? (
@@ -152,7 +155,7 @@ export default async function ReportsPage({
         </div>
 
         <div className="card lg:col-span-2">
-          <div className="border-b border-[#D7DEE5] px-5 py-3.5">
+          <div className="border-b border-line px-5 py-3.5">
             <h2 className="section-title">گزارش مشتریان (بر اساس مبلغ)</h2>
           </div>
           {report.customers.length === 0 ? (
@@ -185,7 +188,7 @@ export default async function ReportsPage({
       </div>
 
       <div className="card">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D7DEE5] px-5 py-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3.5">
           <h2 className="section-title">فهرست اسناد بازه</h2>
           <span className="muted numeric text-xs">
             {formatNumber(report.documents.length, 0)} سند
@@ -213,7 +216,7 @@ export default async function ReportsPage({
                 {report.documents.slice(0, 150).map((row) => (
                   <tr key={row.id}>
                     <td>
-                      <Link href={`/invoices/${row.id}`} className="numeric font-semibold hover:text-[#347C65]">
+                      <Link href={`/invoices/${row.id}`} className="numeric font-semibold hover:text-accent-600">
                         {formatDocumentNumber(row.number)}
                       </Link>
                     </td>

@@ -81,18 +81,18 @@ export function InvoiceOutputControls({
     <div className="flex flex-col items-end gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <div
-          className="inline-flex items-center gap-1 rounded-[10px] border border-[#D7DEE5] bg-white px-1.5 py-1 text-xs"
+          className="inline-flex items-center gap-1 rounded-[10px] border border-line bg-white px-1.5 py-1 text-xs"
           role="group"
           aria-label="انتخاب اندازه برگه"
         >
-          <span className="px-1.5 text-[11px] text-[#6B7A88]">برگه:</span>
+          <span className="px-1.5 text-[11px] text-steel-500">برگه:</span>
           <button
             type="button"
             onClick={() => setPaperSize('A4')}
             className={`rounded-md px-2.5 py-1 font-bold transition ${
               paperSize === 'A4'
-                ? 'bg-[#172535] text-white'
-                : 'text-[#4A5A6A] hover:bg-[#F1F3F5] hover:text-[#172535]'
+                ? 'bg-ink-900 text-white'
+                : 'text-steel-600 hover:bg-surface-2 hover:text-ink-900'
             }`}
           >
             A4
@@ -102,8 +102,8 @@ export function InvoiceOutputControls({
             onClick={() => setPaperSize('A5')}
             className={`rounded-md px-2.5 py-1 font-bold transition ${
               paperSize === 'A5'
-                ? 'bg-[#172535] text-white'
-                : 'text-[#4A5A6A] hover:bg-[#F1F3F5] hover:text-[#172535]'
+                ? 'bg-ink-900 text-white'
+                : 'text-steel-600 hover:bg-surface-2 hover:text-ink-900'
             }`}
           >
             A5
@@ -144,8 +144,8 @@ export function InvoiceOutputControls({
         <div
           className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs ${
             feedback.ok
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-              : 'border-rose-200 bg-rose-50 text-rose-800'
+              ? 'alert-success'
+              : 'alert-danger'
           }`}
         >
           <span>{feedback.message}</span>
@@ -155,7 +155,7 @@ export function InvoiceOutputControls({
               <button
                 type="button"
                 onClick={() => window.pishfactorDesktop?.openFilePath?.(feedback.filePath!)}
-                className="inline-flex items-center gap-1 font-semibold underline hover:text-emerald-950"
+                className="inline-flex items-center gap-1 font-semibold underline hover:opacity-80"
               >
                 <ExternalLink className="h-3 w-3" />
                 باز کردن فایل

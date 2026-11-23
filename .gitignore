@@ -18,3 +18,6 @@ tsconfig.tsbuildinfo
 
 # خروجی ساخت نصب‌کننده ویندوز
 release/
+
+# اسکرین‌شات‌ها و خروجی‌های بررسی موقت
+artifacts/

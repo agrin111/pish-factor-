@@ -72,7 +72,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
   return (
     <div className="space-y-3">
       {missingInfo && (
-        <div className="no-print rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-900">
+        <div className="no-print alert alert-warning">
           اطلاعات رسمی شرکت (لوگو، تلفن، نشانی، شناسه ملی یا کد اقتصادی) هنوز کامل نشده است. برای صدور
           سند رسمی، بخش «تنظیمات شرکت» را تکمیل کنید.
         </div>
@@ -80,7 +80,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
 
       <div className="print-area card overflow-hidden p-5 text-[11px] leading-relaxed sm:p-7">
         {/* سربرگ */}
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border-2 border-[#172535] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border-2 border-ink-900 p-4">
           <div className="flex items-center gap-3">
             {letterhead.logoDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -90,7 +90,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
                 className="h-12 w-12 rounded-lg object-contain"
               />
             ) : (
-              <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#347C65] text-base font-extrabold text-white">
+              <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent-600 text-base font-extrabold text-white">
                 آا
               </span>
             )}
@@ -103,7 +103,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
             </div>
           </div>
 
-          <div className="space-y-0.5 border-[#D7DEE5] text-left sm:border-r sm:pr-5 print:border-r print:pr-5">
+          <div className="space-y-0.5 border-line text-left sm:border-r sm:pr-5 print:border-r print:pr-5">
             <div className="text-sm font-bold">پیش‌فاکتور فروش کالا</div>
             <div>
               شماره:{' '}
@@ -115,14 +115,14 @@ export function InvoiceDocument({ quotation, company }: Props) {
             <div className="numeric">
               اعتبار تا: {formatJalali(quotation.validUntil)} ({formatNumber(quotation.validDays, 0)} روز)
             </div>
-            <div className="text-[10px] text-[#4A5A6A]">وضعیت: {STATUS_LABEL[quotation.status]}</div>
+            <div className="text-[10px] text-steel-600">وضعیت: {STATUS_LABEL[quotation.status]}</div>
           </div>
         </div>
 
         {/* فروشنده و خریدار */}
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 print:grid-cols-2">
-          <div className="rounded-lg border border-[#D7DEE5] p-3">
-            <div className="mb-1.5 border-b border-[#D7DEE5] pb-1.5 font-bold">مشخصات فروشنده</div>
+          <div className="rounded-lg border border-line p-3">
+            <div className="mb-1.5 border-b border-line pb-1.5 font-bold">مشخصات فروشنده</div>
             <div>نام شرکت / فروشنده: {letterhead.companyName}</div>
             {(letterhead.nationalId || letterhead.economicCode || letterhead.registrationNo || !isMisc) && (
               <div className="numeric">
@@ -140,8 +140,8 @@ export function InvoiceDocument({ quotation, company }: Props) {
             <div>نشانی: {letterhead.address || 'تنظیم نشده'}</div>
           </div>
 
-          <div className="rounded-lg border border-[#D7DEE5] p-3">
-            <div className="mb-1.5 border-b border-[#D7DEE5] pb-1.5 font-bold">مشخصات خریدار</div>
+          <div className="rounded-lg border border-line p-3">
+            <div className="mb-1.5 border-b border-line pb-1.5 font-bold">مشخصات خریدار</div>
             <div>نام مشتری: {quotation.customerName}</div>
             {quotation.customerCompany && <div>شرکت / پروژه: {quotation.customerCompany}</div>}
             <div className="numeric">
@@ -173,27 +173,27 @@ export function InvoiceDocument({ quotation, company }: Props) {
         </div>
 
         {/* جدول کالاها */}
-        <div className="mt-3 overflow-hidden rounded-lg border border-[#172535]">
+        <div className="mt-3 overflow-hidden rounded-lg border border-ink-900">
           <table className="w-full border-collapse text-[10px]">
             <thead>
-              <tr className="bg-[#F1F3F5]">
-                <th className="border-l border-[#D7DEE5] px-1.5 py-2 text-center">ردیف</th>
-                <th className="border-l border-[#D7DEE5] px-1.5 py-2 text-right">نام کالا</th>
-                <th className="border-l border-[#D7DEE5] px-1.5 py-2 text-right">مشخصات</th>
-                <th className="border-l border-[#D7DEE5] px-1.5 py-2 text-center">سایز</th>
-                <th className="border-l border-[#D7DEE5] px-1.5 py-2 text-center">واحد</th>
-                <th className="border-l border-[#D7DEE5] px-1.5 py-2 text-left">مقدار</th>
-                <th className="border-l border-[#D7DEE5] px-1.5 py-2 text-left">قیمت واحد</th>
+              <tr className="bg-surface-2">
+                <th className="border-l border-line px-1.5 py-2 text-center">ردیف</th>
+                <th className="border-l border-line px-1.5 py-2 text-right">نام کالا</th>
+                <th className="border-l border-line px-1.5 py-2 text-right">مشخصات</th>
+                <th className="border-l border-line px-1.5 py-2 text-center">سایز</th>
+                <th className="border-l border-line px-1.5 py-2 text-center">واحد</th>
+                <th className="border-l border-line px-1.5 py-2 text-left">مقدار</th>
+                <th className="border-l border-line px-1.5 py-2 text-left">قیمت واحد</th>
                 <th className="px-1.5 py-2 text-left">مبلغ کل</th>
               </tr>
             </thead>
             <tbody>
               {quotation.items.map((item) => (
-                <tr key={item.id} className="border-t border-[#D7DEE5]">
-                  <td className="border-l border-[#D7DEE5] px-1.5 py-1.5 text-center numeric">
+                <tr key={item.id} className="border-t border-line">
+                  <td className="border-l border-line px-1.5 py-1.5 text-center numeric">
                     {formatNumber(item.rowIndex, 0)}
                   </td>
-                  <td className="border-l border-[#D7DEE5] px-1.5 py-1.5 font-semibold">
+                  <td className="border-l border-line px-1.5 py-1.5 font-semibold">
                     {item.productName}
                     {item.sku && (
                       <div className="muted numeric mt-0.5 text-[9px] font-normal" dir="ltr">
@@ -201,19 +201,19 @@ export function InvoiceDocument({ quotation, company }: Props) {
                       </div>
                     )}
                   </td>
-                  <td className="border-l border-[#D7DEE5] px-1.5 py-1.5 text-[#4A5A6A]">
+                  <td className="border-l border-line px-1.5 py-1.5 text-steel-600">
                     {item.specs || '—'}
                   </td>
-                  <td className="border-l border-[#D7DEE5] px-1.5 py-1.5 text-center">
+                  <td className="border-l border-line px-1.5 py-1.5 text-center">
                     {item.size || '—'}
                   </td>
-                  <td className="border-l border-[#D7DEE5] px-1.5 py-1.5 text-center">
+                  <td className="border-l border-line px-1.5 py-1.5 text-center">
                     {UNIT_LABEL[item.unit]}
                   </td>
-                  <td className="border-l border-[#D7DEE5] px-1.5 py-1.5 text-left numeric">
+                  <td className="border-l border-line px-1.5 py-1.5 text-left numeric">
                     {formatNumber(item.quantity, 3)}
                   </td>
-                  <td className="border-l border-[#D7DEE5] px-1.5 py-1.5 text-left numeric">
+                  <td className="border-l border-line px-1.5 py-1.5 text-left numeric">
                     {formatNumber(item.unitPrice, 0)}
                   </td>
                   <td className="px-1.5 py-1.5 text-left font-bold numeric">
@@ -227,7 +227,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
 
         {/* شرایط و مالی */}
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-12 print:grid-cols-12">
-          <div className="rounded-lg border border-[#D7DEE5] p-3 sm:col-span-7 print:col-span-7">
+          <div className="rounded-lg border border-line p-3 sm:col-span-7 print:col-span-7">
             <div className="mb-1 font-bold">شرایط پرداخت، تحویل و توضیحات</div>
             <div>شرایط پرداخت: {quotation.paymentTerms || '—'}</div>
             <div>شرایط تحویل: {quotation.deliveryTerms || '—'}</div>
@@ -235,7 +235,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
             {quotation.notes && <div>توضیحات: {quotation.notes}</div>}
           </div>
 
-          <div className="rounded-lg border border-[#172535] bg-[#F1F3F5]/50 p-3 sm:col-span-5 print:col-span-5">
+          <div className="rounded-lg border border-ink-900 bg-surface-2/50 p-3 sm:col-span-5 print:col-span-5">
             <div className="flex justify-between numeric">
               <span className="muted">جمع کل کالاها</span>
               <span>{formatNumber(quotation.itemsSubtotal, 0)}</span>
@@ -246,7 +246,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
             </div>
             <div className="flex justify-between numeric">
               <span className="muted">تخفیف</span>
-              <span className="text-rose-700">{formatNumber(quotation.discountAmount, 0)}</span>
+              <span className="text-danger">{formatNumber(quotation.discountAmount, 0)}</span>
             </div>
             <div className="flex justify-between numeric">
               <span className="muted">
@@ -260,7 +260,7 @@ export function InvoiceDocument({ quotation, company }: Props) {
                 <span>{formatNumber(quotation.totalWeightKg ?? 0, 2)} کیلوگرم</span>
               </div>
             )}
-            <div className="mt-1.5 flex items-center justify-between border-t-2 border-[#172535] pt-1.5 text-xs font-extrabold numeric">
+            <div className="mt-1.5 flex items-center justify-between border-t-2 border-ink-900 pt-1.5 text-xs font-extrabold numeric">
               <span>مبلغ نهایی</span>
               <span>{formatCurrency(quotation.grandTotal, quotation.currency)}</span>
             </div>
@@ -271,24 +271,24 @@ export function InvoiceDocument({ quotation, company }: Props) {
         </div>
 
         {company.disclaimerText && (
-          <div className="mt-3 rounded-lg border border-[#D7DEE5] bg-[#F1F3F5]/40 p-2.5 text-[10px] text-[#4A5A6A]">
+          <div className="mt-3 rounded-lg border border-line bg-surface-2/40 p-2.5 text-[10px] text-steel-600">
             <span className="font-semibold">سلب مسئولیت و شرایط اعتبار: </span>
             {company.disclaimerText}
           </div>
         )}
 
         <div className="mt-3 grid grid-cols-2 gap-6">
-          <div className="flex h-24 flex-col justify-between rounded-lg border border-[#D7DEE5] p-3 text-center">
+          <div className="flex h-24 flex-col justify-between rounded-lg border border-line p-3 text-center">
             <div className="font-semibold">مهر و امضای فروشنده</div>
             <div className="muted text-[10px]">صادرکننده: {quotation.createdByName}</div>
           </div>
-          <div className="flex h-24 flex-col justify-between rounded-lg border border-[#D7DEE5] p-3 text-center">
+          <div className="flex h-24 flex-col justify-between rounded-lg border border-line p-3 text-center">
             <div className="font-semibold">مهر و امضای خریدار</div>
             <div className="muted text-[10px]">تأیید مبالغ و شرایط پیش‌فاکتور</div>
           </div>
         </div>
 
-        <div className="muted mt-3 border-t border-[#D7DEE5] pt-2 text-[9px]">
+        <div className="muted mt-3 border-t border-line pt-2 text-[9px]">
           {letterhead.companyName}
           {letterhead.phone ? ` — ${letterhead.phone}` : ''}
           {letterhead.address ? ` — ${letterhead.address}` : ''} · واحد پول: {currency}

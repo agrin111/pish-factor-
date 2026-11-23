@@ -47,7 +47,7 @@ export function PrintButton({
     <div className="inline-flex flex-wrap items-center gap-2">
       {showPaperSelector && (
         <div
-          className="inline-flex items-center rounded-lg border border-[#D7DEE5] bg-white p-0.5 text-xs"
+          className="inline-flex items-center rounded-lg border border-line bg-white p-0.5 text-xs"
           role="group"
           aria-label="انتخاب اندازه برگه"
         >
@@ -56,8 +56,8 @@ export function PrintButton({
             onClick={() => setPaperSize('A4')}
             className={`rounded-md px-2.5 py-1 font-semibold transition ${
               paperSize === 'A4'
-                ? 'bg-[#172535] text-white'
-                : 'text-[#4A5A6A] hover:text-[#172535]'
+                ? 'bg-ink-900 text-white'
+                : 'text-steel-600 hover:text-ink-900'
             }`}
           >
             A4
@@ -67,8 +67,8 @@ export function PrintButton({
             onClick={() => setPaperSize('A5')}
             className={`rounded-md px-2.5 py-1 font-semibold transition ${
               paperSize === 'A5'
-                ? 'bg-[#172535] text-white'
-                : 'text-[#4A5A6A] hover:text-[#172535]'
+                ? 'bg-ink-900 text-white'
+                : 'text-steel-600 hover:text-ink-900'
             }`}
           >
             A5
@@ -81,7 +81,7 @@ export function PrintButton({
         {printing ? 'در حال ارسال...' : label}
       </button>
 
-      {error && <span className="text-xs text-rose-700">{error}</span>}
+      {error && <span className="text-xs text-danger">{error}</span>}
     </div>
   );
 }

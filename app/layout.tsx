@@ -25,8 +25,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fa" dir="rtl" className={vazirmatn.variable}>
-      <body className="min-h-screen bg-[#F1F3F5] text-[#172535] antialiased">{children}</body>
+    <html
+      lang="fa"
+      dir="rtl"
+      className={`${vazirmatn.variable} ${vazirmatn.className}`}
+    >
+      <body className="min-h-screen bg-surface text-ink-900 antialiased">{children}</body>
     </html>
   );
 }

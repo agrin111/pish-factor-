@@ -152,9 +152,9 @@ export function InvoiceActions({
       )}
 
       {duplicateState.message && !duplicateState.ok && (
-        <span className="text-[10px] text-rose-700">{duplicateState.message}</span>
+        <span className="text-[10px] text-danger">{duplicateState.message}</span>
       )}
-      {pdfError && <span className="text-[10px] text-rose-700">{pdfError}</span>}
+      {pdfError && <span className="text-[10px] text-danger">{pdfError}</span>}
 
       <Modal open={statusOpen} title="تغییر وضعیت پیش‌فاکتور" onClose={() => setStatusOpen(false)}>
         <form action={statusAction} className="space-y-3">
@@ -163,8 +163,8 @@ export function InvoiceActions({
             <div
               className={`rounded-lg border p-2.5 text-xs ${
                 visibleStatusState.ok
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-rose-200 bg-rose-50 text-rose-800'
+                  ? 'alert-success'
+                  : 'alert-danger'
               }`}
             >
               {visibleStatusState.message}
@@ -206,7 +206,7 @@ export function InvoiceActions({
         <form action={deleteAction} className="space-y-4">
           <input type="hidden" name="id" value={id} />
           {visibleDeleteState.message && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-800">
+            <div className="alert alert-danger">
               {visibleDeleteState.message}
             </div>
           )}

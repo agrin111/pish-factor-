@@ -11,6 +11,7 @@ import { formatJalali } from '@/lib/jalali';
 import { formatDocumentNumber } from '@/lib/format';
 import { effectiveStatus } from '@/lib/quotation-status';
 import { STATUS_BADGE, STATUS_LABEL } from '@/lib/labels';
+import { PageHeader } from '@/components/ui/page-header';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,38 +73,38 @@ export default async function InvoiceDetailPage({
 
   return (
     <div className="space-y-4">
-      <div className="no-print flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="numeric text-lg font-bold">
-              {formatDocumentNumber(quotation.number)}
-            </h1>
-            <span className={STATUS_BADGE[shownStatus]}>{STATUS_LABEL[shownStatus]}</span>
-          </div>
-          <p className="muted mt-1 text-xs">
-            {quotation.customerName} · صدور <span className="numeric">{formatJalali(quotation.issueDate)}</span> ·
-            صادرکننده {quotation.createdBy.fullName}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/invoices" className="btn btn-secondary">
-            بازگشت
-          </Link>
-          {canEdit && (
-            <Link href={`/invoices/${quotation.id}/edit`} className="btn btn-secondary">
-              <Pencil className="h-4 w-4" />
-              ویرایش
-            </Link>
-          )}
-          <InvoiceOutputControls
-            id={quotation.id}
-            documentNumber={quotation.number}
-            customerName={quotation.customerName}
-            issueDate={quotation.issueDate.toISOString()}
-            shareData={shareData}
-          />
-        </div>
+      <div className="no-print">
+        <PageHeader
+          title={<span className="numeric">{formatDocumentNumber(quotation.number)}</span>}
+          meta={<span className={STATUS_BADGE[shownStatus]}>{STATUS_LABEL[shownStatus]}</span>}
+          description={
+            <>
+              {quotation.customerName} · صدور{' '}
+              <span className="numeric">{formatJalali(quotation.issueDate)}</span> · صادرکننده{' '}
+              {quotation.createdBy.fullName}
+            </>
+          }
+          actions={
+            <>
+              <Link href="/invoices" className="btn btn-secondary">
+                بازگشت
+              </Link>
+              {canEdit && (
+                <Link href={`/invoices/${quotation.id}/edit`} className="btn btn-secondary">
+                  <Pencil className="h-4 w-4" />
+                  ویرایش
+                </Link>
+              )}
+              <InvoiceOutputControls
+                id={quotation.id}
+                documentNumber={quotation.number}
+                customerName={quotation.customerName}
+                issueDate={quotation.issueDate.toISOString()}
+                shareData={shareData}
+              />
+            </>
+          }
+        />
       </div>
 
       <div className="no-print card card-pad">
@@ -165,15 +166,15 @@ export default async function InvoiceDetailPage({
       />
 
       <div className="no-print card">
-        <div className="border-b border-[#D7DEE5] px-5 py-3.5">
+        <div className="border-b border-line px-5 py-3.5">
           <h2 className="section-title">تاریخچه وضعیت</h2>
         </div>
-        <ul className="divide-y divide-[#EEF1F4]">
+        <ul className="divide-y divide-line">
           {quotation.statusHistory.map((entry) => (
             <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 text-xs">
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-[#F1F3F5] p-1">
-                  <UserRound className="h-3 w-3 text-[#347C65]" />
+                <span className="rounded-full bg-surface-2 p-1">
+                  <UserRound className="h-3 w-3 text-accent-600" />
                 </span>
                 <span>
                   {entry.fromStatus ? (

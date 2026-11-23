@@ -27,8 +27,8 @@ export function BrandLogo({ logoDataUrl, size = 'md', variant = 'dark' }: BrandL
     );
   }
 
-  const bg = variant === 'light' ? '#FFFFFF' : '#347C65';
-  const color = variant === 'light' ? '#172535' : '#FFFFFF';
+  const bg = variant === 'light' ? '#FFFFFF' : '#0F1A24';
+  const color = variant === 'light' ? '#0F1A24' : '#FFFFFF';
 
   return (
     <span

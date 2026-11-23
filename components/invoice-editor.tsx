@@ -370,8 +370,8 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
         <div
           className={`flex items-start gap-2 rounded-xl border p-3 text-xs ${
             state.ok
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-              : 'border-rose-200 bg-rose-50 text-rose-800'
+              ? 'alert-success'
+              : 'alert-danger'
           }`}
         >
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -532,7 +532,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
       </div>
 
       <div className="card overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D7DEE5] px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
           <h2 className="section-title">ردیف‌های کالا</h2>
           <button
             type="button"
@@ -544,24 +544,24 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
           </button>
         </div>
 
-        <div className="table-wrap !rounded-none !border-0">
-          <table className="data" style={{ minWidth: 1120 }}>
-            <thead>
+        <div className="table-wrap max-h-[70vh] !rounded-none !border-0">
+          <table className="data" style={{ minWidth: 1040 }}>
+            <thead className="sticky top-0 z-10">
               <tr>
-                <th style={{ width: 46 }}>ردیف</th>
-                <th style={{ minWidth: 180 }}>کالای کاتالوگ</th>
-                <th style={{ width: 96 }}>کد کالا</th>
-                <th style={{ minWidth: 160 }}>نام کالا *</th>
-                <th style={{ minWidth: 140 }}>مشخصات</th>
-                <th style={{ width: 84 }}>سایز</th>
-                <th style={{ width: 92 }}>واحد</th>
-                <th style={{ width: 88 }}>وزن واحد (ک‌گ)</th>
-                <th style={{ width: 86 }}>مقدار</th>
-                <th style={{ width: 145 }}>
+                <th style={{ width: 34 }}>ردیف</th>
+                <th style={{ width: 118 }}>کالای کاتالوگ</th>
+                <th style={{ width: 72 }}>کد کالا</th>
+                <th style={{ width: 112 }}>نام کالا *</th>
+                <th style={{ width: 86 }}>مشخصات</th>
+                <th style={{ width: 54 }}>سایز</th>
+                <th style={{ width: 104 }}>واحد</th>
+                <th style={{ width: 74 }}>وزن واحد (ک‌گ)</th>
+                <th style={{ width: 66 }}>مقدار</th>
+                <th style={{ width: 118 }}>
                   قیمت واحد ({currency === 'RIAL' ? 'ریال' : 'تومان'}) *
                 </th>
-                <th style={{ width: 110 }}>مبلغ ردیف</th>
-                <th style={{ width: 92 }}>ترتیب / حذف</th>
+                <th style={{ width: 88 }}>مبلغ ردیف</th>
+                <th style={{ width: 84 }}>ترتیب / حذف</th>
               </tr>
             </thead>
             <tbody>
@@ -624,7 +624,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                   </td>
                   <td>
                     <select
-                      className="select !py-1.5 text-xs"
+                      className="select !px-1.5 !py-1.5 text-xs"
                       value={row.unit}
                       onChange={(event) =>
                         updateRow(row.key, { unit: event.target.value as UnitType })
@@ -667,7 +667,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                     {catalogPrice > 0 && row.unitPrice !== catalogProduct?.unitPrice && (
                       <button
                         type="button"
-                        className="numeric mt-0.5 block text-[10px] text-[#347C65] hover:underline"
+                        className="numeric mt-0.5 block text-[10px] text-accent-600 hover:underline"
                         onClick={() =>
                           updateRow(row.key, { unitPrice: catalogProduct?.unitPrice ?? '' })
                         }
@@ -679,11 +679,11 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                   <td className="numeric font-semibold">
                     {formatNumber(totals.lines[index] ?? 0, 0)}
                   </td>
-                  <td>
-                    <div className="flex items-center justify-center gap-0.5">
+                  <td className="!px-1">
+                    <div className="flex flex-nowrap items-center justify-center gap-0">
                       <button
                         type="button"
-                        className="btn btn-ghost btn-sm !px-1.5"
+                        className="btn btn-ghost btn-sm !px-1"
                         onClick={() => moveRow(index, -1)}
                         disabled={index === 0}
                         aria-label="انتقال ردیف به بالا"
@@ -693,7 +693,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                       </button>
                       <button
                         type="button"
-                        className="btn btn-ghost btn-sm !px-1.5"
+                        className="btn btn-ghost btn-sm !px-1"
                         onClick={() => moveRow(index, 1)}
                         disabled={index === rows.length - 1}
                         aria-label="انتقال ردیف به پایین"
@@ -703,7 +703,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                       </button>
                       <button
                         type="button"
-                        className="btn btn-ghost btn-sm !px-1.5 text-rose-700"
+                        className="btn btn-ghost btn-sm !px-1 text-danger"
                         onClick={() =>
                           setRows((current) =>
                             current.length === 1
@@ -747,7 +747,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                   key={suggestion}
                   type="button"
                   onClick={() => setPaymentTerms(suggestion)}
-                  className="rounded-md border border-[#D7DEE5] bg-[#F8FAFC] px-2 py-0.5 text-[11px] text-[#334155] transition-colors hover:border-[#347C65] hover:text-[#347C65]"
+                  className="rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] text-steel-700 transition-colors hover:border-accent-600 hover:text-accent-600"
                 >
                   {suggestion}
                 </button>
@@ -771,7 +771,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
                   key={suggestion}
                   type="button"
                   onClick={() => setDeliveryTerms(suggestion)}
-                  className="rounded-md border border-[#D7DEE5] bg-[#F8FAFC] px-2 py-0.5 text-[11px] text-[#334155] transition-colors hover:border-[#347C65] hover:text-[#347C65]"
+                  className="rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] text-steel-700 transition-colors hover:border-accent-600 hover:text-accent-600"
                 >
                   {suggestion}
                 </button>
@@ -792,7 +792,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
           </div>
         </div>
 
-        <div className="card card-pad space-y-3">
+        <div className="card card-pad space-y-3 lg:sticky lg:top-4 lg:self-start">
           <h2 className="section-title">خلاصه مالی</h2>
 
           <div className="flex items-center justify-between gap-2 text-xs">
@@ -837,7 +837,7 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="muted">تخفیف</span>
-            <span className="numeric font-semibold text-rose-700">
+            <span className="numeric font-semibold text-danger">
               {formatCurrency(totals.discount, currency)}
             </span>
           </div>
@@ -850,12 +850,12 @@ export function InvoiceEditor({ customers, products, defaults, existing }: Props
             </div>
           )}
 
-          <div className="rounded-lg bg-[#F1F3F5] p-3">
+          <div className="rounded-lg bg-surface-2 p-3">
             <div className="flex items-center justify-between text-sm font-extrabold">
               <span>مبلغ نهایی</span>
               <span className="numeric">{formatCurrency(totals.grandTotal, currency)}</span>
             </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-[#4A5A6A]">
+            <p className="mt-1 text-[11px] leading-relaxed text-steel-600">
               {amountInWords(totals.grandTotal, currency)}
             </p>
           </div>

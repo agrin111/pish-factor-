@@ -2,6 +2,7 @@ import { DatabaseBackup, ShieldAlert } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth';
 import { getCompanySettings } from '@/lib/settings';
 import { SettingsForm } from '@/components/settings-form';
+import { PageHeader } from '@/components/ui/page-header';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,23 +12,20 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-bold">تنظیمات شرکت</h1>
-        <p className="muted mt-1 text-xs">
-          این اطلاعات در سربرگ و پایین تمام پیش‌فاکتورهای رسمی استفاده می‌شود. تا زمان تکمیل، عبارت
-          «تنظیم نشده» در سند نمایش داده می‌شود.
-        </p>
-      </div>
+      <PageHeader
+        title="تنظیمات شرکت"
+        description="این اطلاعات در سربرگ و پایین تمام پیش‌فاکتورهای رسمی استفاده می‌شود. تا زمان تکمیل، عبارت «تنظیم نشده» در سند نمایش داده می‌شود."
+      />
 
-      <div className="card card-pad flex flex-wrap items-center justify-between gap-3 border-amber-200 bg-amber-50">
-        <div className="flex items-start gap-2 text-xs text-amber-900">
+      <div className="alert alert-warning flex-wrap items-center justify-between gap-3">
+        <div className="flex items-start gap-2">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
             لوگو، شماره تماس، نشانی، شناسه ملی و کد اقتصادی را با اطلاعات رسمی شرکت تکمیل کنید؛ اطلاعات
             ساختگی در سند درج نمی‌شود.
           </p>
         </div>
-        <a href="/api/backup" download className="btn btn-navy">
+        <a href="/api/backup" download className="btn btn-secondary">
           <DatabaseBackup className="h-4 w-4" />
           دانلود نسخه پشتیبان JSON
         </a>

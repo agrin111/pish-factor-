@@ -336,24 +336,24 @@ export function InvoiceShareModal({
     <Modal open={open} onClose={onClose} title="اشتراک‌گذاری و ارسال پیش‌فاکتور">
       <div className="space-y-4">
         {loading ? (
-          <div className="py-8 text-center text-xs text-[#6B7A88]">
+          <div className="py-8 text-center text-xs text-steel-500">
             در حال آماده‌سازی اطلاعات پیش‌فاکتور...
           </div>
         ) : (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#D7DEE5] bg-[#F7F9FA] px-3 py-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2.5">
               <div className="text-xs">
                 <span className="font-semibold">اندازه فایل PDF برای ارسال:</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center rounded-lg border border-[#D7DEE5] bg-white p-0.5 text-xs">
+                <div className="inline-flex items-center rounded-lg border border-line bg-white p-0.5 text-xs">
                   <button
                     type="button"
                     onClick={() => setPaperSize('A4')}
                     className={`rounded-md px-2.5 py-1 font-bold transition ${
                       paperSize === 'A4'
-                        ? 'bg-[#172535] text-white'
-                        : 'text-[#4A5A6A] hover:text-[#172535]'
+                        ? 'bg-ink-900 text-white'
+                        : 'text-steel-600 hover:text-ink-900'
                     }`}
                   >
                     A4
@@ -363,8 +363,8 @@ export function InvoiceShareModal({
                     onClick={() => setPaperSize('A5')}
                     className={`rounded-md px-2.5 py-1 font-bold transition ${
                       paperSize === 'A5'
-                        ? 'bg-[#172535] text-white'
-                        : 'text-[#4A5A6A] hover:text-[#172535]'
+                        ? 'bg-ink-900 text-white'
+                        : 'text-steel-600 hover:text-ink-900'
                     }`}
                   >
                     A5
@@ -421,7 +421,7 @@ export function InvoiceShareModal({
                 <button
                   type="button"
                   onClick={handleCopyText}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#347C65] hover:underline"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-accent-600 hover:underline"
                 >
                   {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                   {copied ? 'کپی شد' : 'کپی متن'}
@@ -437,13 +437,13 @@ export function InvoiceShareModal({
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs font-semibold text-[#3D4D5D]">ارسال در پیام‌رسان‌ها:</div>
+              <div className="text-xs font-semibold text-steel-700">ارسال در پیام‌رسان‌ها:</div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <button
                   type="button"
                   disabled={busyAction !== null}
                   onClick={() => handleMessengerShare('whatsapp')}
-                  className="btn justify-center border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+                  className="btn justify-center border-success/30 bg-success/5 text-success hover:bg-success/10"
                 >
                   <MessageCircle className="h-4 w-4" />
                   {busyAction === 'whatsapp' ? 'در حال آماده‌سازی...' : 'واتساپ'}
@@ -463,7 +463,7 @@ export function InvoiceShareModal({
                   type="button"
                   disabled={busyAction !== null}
                   onClick={() => handleMessengerShare('bale')}
-                  className="btn justify-center border-teal-300 bg-teal-50 text-teal-900 hover:bg-teal-100"
+                  className="btn justify-center border-info/30 bg-info/5 text-info hover:bg-info/10"
                 >
                   <MessageCircle className="h-4 w-4" />
                   {busyAction === 'bale' ? 'در حال آماده‌سازی...' : 'پیام‌رسان بله'}
@@ -482,8 +482,8 @@ export function InvoiceShareModal({
               )}
             </div>
 
-            <div className="space-y-2 rounded-xl border border-[#D7DEE5] bg-[#F9FAFB] p-3">
-              <div className="text-xs font-semibold text-[#3D4D5D]">ارسال از طریق ایمیل:</div>
+            <div className="space-y-2 rounded-xl border border-line bg-surface p-3">
+              <div className="text-xs font-semibold text-steel-700">ارسال از طریق ایمیل:</div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -508,9 +508,9 @@ export function InvoiceShareModal({
                 </button>
               </div>
               {data && !data.smtpConfigured && (
-                <p className="text-[11px] text-[#6B7A88]">
+                <p className="text-[11px] text-steel-500">
                   برای ارسال خودکار ایمیل همراه فایل PDF از داخل برنامه، بخش SMTP را در{' '}
-                  <Link href="/settings" onClick={onClose} className="font-semibold text-[#347C65] underline">
+                  <Link href="/settings" onClick={onClose} className="font-semibold text-accent-600 underline">
                     تنظیمات شرکت
                   </Link>{' '}
                   تکمیل کنید.
@@ -531,8 +531,8 @@ export function InvoiceShareModal({
             )}
 
             {preparedPath && isDesktop && (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#D7DEE5] bg-white px-3 py-2 text-xs">
-                <span className="truncate text-[#4A5A6A]" dir="ltr">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs">
+                <span className="truncate text-steel-600" dir="ltr">
                   {preparedPath}
                 </span>
                 <div className="flex shrink-0 items-center gap-2">
@@ -560,8 +560,8 @@ export function InvoiceShareModal({
               <div
                 className={`rounded-xl border p-3 text-xs leading-relaxed ${
                   feedback.ok
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                    : 'border-rose-200 bg-rose-50 text-rose-800'
+                    ? 'alert-success'
+                    : 'alert-danger'
                 }`}
               >
                 <p>{feedback.message}</p>

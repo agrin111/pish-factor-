@@ -9,6 +9,8 @@ import { STATUS_BADGE, STATUS_LABEL, STATUSES } from '@/lib/labels';
 import { effectiveStatus, statusWhere } from '@/lib/quotation-status';
 import { InvoiceActions } from '@/components/invoice-actions';
 import { getCompanySettings } from '@/lib/settings';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,20 +100,20 @@ export default async function InvoicesPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold">آرشیو پیش‌فاکتورها</h1>
-          <p className="muted mt-1 text-xs">
-            {user.role === 'ADMIN'
-              ? 'تمام اسناد صادرشده در سامانه'
-              : 'پیش‌فاکتورهای صادرشده توسط شما'}
-          </p>
-        </div>
-        <Link href="/invoices/new" className="btn btn-primary">
-          <Plus className="h-4 w-4" />
-          صدور پیش‌فاکتور جدید
-        </Link>
-      </div>
+      <PageHeader
+        title="آرشیو پیش‌فاکتورها"
+        description={
+          user.role === 'ADMIN'
+            ? 'تمام اسناد صادرشده در سامانه'
+            : 'پیش‌فاکتورهای صادرشده توسط شما'
+        }
+        actions={
+          <Link href="/invoices/new" className="btn btn-primary">
+            <Plus className="h-4 w-4" />
+            صدور پیش‌فاکتور جدید
+          </Link>
+        }
+      />
 
       <form className="card card-pad grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6" method="get">
         <div className="lg:col-span-2">
@@ -194,13 +196,15 @@ export default async function InvoicesPage({
       </form>
 
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#D7DEE5] bg-white p-10 text-center">
-          <FileText className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-3 text-sm font-semibold">پیش‌فاکتوری یافت نشد</p>
-          <p className="muted mt-1 text-xs">
-            {total === 0 ? 'با دکمه «صدور پیش‌فاکتور جدید» اولین سند را ایجاد کنید.' : 'فیلترها را تغییر دهید.'}
-          </p>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="پیش‌فاکتوری یافت نشد"
+          hint={
+            total === 0
+              ? 'با دکمه «صدور پیش‌فاکتور جدید» اولین سند را ایجاد کنید.'
+              : 'فیلترها را تغییر دهید.'
+          }
+        />
       ) : (
         <div className="table-wrap">
           <table className="data">
@@ -227,7 +231,7 @@ export default async function InvoicesPage({
                     <td>
                       <Link
                         href={`/invoices/${row.id}`}
-                        className="numeric font-semibold hover:text-[#347C65]"
+                        className="numeric font-semibold hover:text-accent-600"
                       >
                         {formatDocumentNumber(row.number)}
                       </Link>

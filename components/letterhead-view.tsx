@@ -150,8 +150,8 @@ export function LetterheadView({
         <div
           className={`no-print rounded-xl border p-3 text-xs ${
             state.ok
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-              : 'border-rose-200 bg-rose-50 text-rose-800'
+              ? 'alert-success'
+              : 'alert-danger'
           }`}
         >
           {state.message}
@@ -164,7 +164,7 @@ export function LetterheadView({
           <input type="hidden" name="logoDataUrl" value={removeLogo ? '' : logo ?? ''} />
           <input type="hidden" name="removeLogo" value={removeLogo ? 'true' : 'false'} />
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D7DEE5] pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
             <h2 className="section-title">
               {activeTab === 'MAIN' ? 'ویرایش سربرگ اصلی شرکت' : 'ویرایش سربرگ متفرقه'}
             </h2>
@@ -372,7 +372,7 @@ export function LetterheadView({
       )}
 
       <div className="print-area card mx-auto w-full max-w-[820px] p-6 sm:p-10">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b-4 border-[#172535] pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b-4 border-ink-900 pb-4">
           <div className="flex items-center gap-4">
             {displayLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -382,7 +382,7 @@ export function LetterheadView({
                 className="h-16 w-16 rounded-lg object-contain"
               />
             ) : (
-              <span className="flex h-16 w-16 items-center justify-center rounded-lg bg-[#347C65] text-xl font-extrabold text-white">
+              <span className="flex h-16 w-16 items-center justify-center rounded-lg bg-accent-600 text-xl font-extrabold text-white">
                 آا
               </span>
             )}
@@ -409,17 +409,17 @@ export function LetterheadView({
           <div className="numeric">تاریخ: {todayLabel}</div>
           <div className="flex items-baseline gap-1">
             <span>شماره:</span>
-            <span className="inline-block w-40 border-b border-dotted border-[#172535]" />
+            <span className="inline-block w-40 border-b border-dotted border-ink-900" />
           </div>
         </div>
 
         <div className="mt-8 space-y-6" aria-hidden="true">
           {Array.from({ length: 16 }).map((_, index) => (
-            <div key={index} className="border-b border-dotted border-[#D7DEE5]" />
+            <div key={index} className="border-b border-dotted border-line" />
           ))}
         </div>
 
-        <div className="numeric mt-8 border-t border-[#D7DEE5] pt-3 text-[10px] text-[#4A5A6A]">
+        <div className="numeric mt-8 border-t border-line pt-3 text-[10px] text-steel-600">
           {companyName}
           {phone ? ` — ${phone}` : ''}
           {website ? ` — ${website}` : ''}

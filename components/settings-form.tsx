@@ -51,6 +51,21 @@ export interface SettingsInitial {
   hasSmtpPass: boolean;
 }
 
+const TABS = [
+  { id: 'general', label: 'سربرگ اصلی' },
+  { id: 'misc', label: 'سربرگ متفرقه' },
+  { id: 'defaults', label: 'پیش‌فرض‌های صدور' },
+  { id: 'smtp', label: 'ایمیل و SMTP' },
+] as const;
+
+const panelProps = (index: number) => ({
+  role: 'tabpanel' as const,
+  id: `settings-panel-${TABS[index].id}`,
+  'aria-labelledby': `settings-tab-${TABS[index].id}`,
+  'data-settings-panel': index,
+  className: 'space-y-4',
+});
+
 export function SettingsForm({ initial }: { initial: SettingsInitial }) {
   const router = useRouter();
   const [state, formAction] = useActionState(saveCompanySettingsAction, initialActionState);
@@ -107,6 +122,56 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
   const [smtpPass, setSmtpPass] = useState('');
   const [smtpFrom, setSmtpFrom] = useState(initial.smtpFrom ?? '');
   const [clearSmtpPass, setClearSmtpPass] = useState(false);
+
+  const [tab, setTab] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const resubmitRef = useRef(false);
+
+  const focusTab = (index: number) => {
+    setTab(index);
+    tabRefs.current[index]?.focus();
+  };
+
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const last = TABS.length - 1;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      focusTab(index === last ? 0 : index + 1);
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      focusTab(index === 0 ? last : index - 1);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      focusTab(0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      focusTab(last);
+    }
+  };
+
+  // فیلد الزامی داخل تب پنهان قابل فوکوس نیست و پیام اعتبارسنجی مرورگر نمایش داده نمی‌شود؛
+  // با گرفتن رویداد invalid همان تب را فعال می‌کنیم و یک بار دیگر اعتبارسنجی را اجرا می‌کنیم.
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const handler = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      const panel = target?.closest<HTMLElement>('[data-settings-panel]');
+      const index = Number(panel?.dataset.settingsPanel);
+      if (!panel || Number.isNaN(index)) return;
+      setTab(index);
+      if (index !== tab) resubmitRef.current = true;
+    };
+    form.addEventListener('invalid', handler, true);
+    return () => form.removeEventListener('invalid', handler, true);
+  }, [tab]);
+
+  useEffect(() => {
+    if (!resubmitRef.current) return;
+    resubmitRef.current = false;
+    formRef.current?.requestSubmit();
+  }, [tab]);
 
   useEffect(() => {
     setCompanyName(initial.companyName);
@@ -180,7 +245,7 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
   };
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form ref={formRef} action={formAction} className="space-y-4">
       <input type="hidden" name="logoDataUrl" value={removeLogo ? '' : logo ?? ''} />
       <input type="hidden" name="removeLogo" value={removeLogo ? 'true' : 'false'} />
       <input type="hidden" name="miscLogoDataUrl" value={removeMiscLogo ? '' : miscLogo ?? ''} />
@@ -190,14 +255,43 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
         <div
           className={`rounded-xl border p-3 text-xs ${
             state.ok
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-              : 'border-rose-200 bg-rose-50 text-rose-800'
+              ? 'alert-success'
+              : 'alert-danger'
           }`}
         >
           {state.message}
         </div>
       )}
 
+      <div className="card p-1.5" role="tablist" aria-label="بخش‌های تنظیمات">
+        <div className="flex gap-1 overflow-x-auto">
+          {TABS.map((item, index) => (
+            <button
+              key={item.id}
+              ref={(element) => {
+                tabRefs.current[index] = element;
+              }}
+              type="button"
+              role="tab"
+              id={`settings-tab-${item.id}`}
+              aria-selected={tab === index}
+              aria-controls={`settings-panel-${item.id}`}
+              tabIndex={tab === index ? 0 : -1}
+              onClick={() => setTab(index)}
+              onKeyDown={(event) => handleTabKeyDown(event, index)}
+              className={`flex-1 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                tab === index
+                  ? 'bg-ink-900 text-white shadow-sm'
+                  : 'text-steel-500 hover:bg-surface hover:text-ink-900'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <section {...panelProps(0)} hidden={tab !== 0}>
       <div className="card card-pad space-y-4">
         <div>
           <h2 className="section-title">سربرگ اصلی شرکت و لوگو</h2>
@@ -421,7 +515,9 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
           />
         </div>
       </div>
+      </section>
 
+      <section {...panelProps(1)} hidden={tab !== 1}>
       <div className="card card-pad space-y-4">
         <div>
           <h2 className="section-title">سربرگ متفرقه</h2>
@@ -627,6 +723,9 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
         </div>
       </div>
 
+      </section>
+
+      <section {...panelProps(2)} hidden={tab !== 2}>
       <div className="card card-pad space-y-4">
         <h2 className="section-title">پیش‌فرض‌های صدور پیش‌فاکتور</h2>
 
@@ -742,6 +841,9 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
         </div>
       </div>
 
+      </section>
+
+      <section {...panelProps(3)} hidden={tab !== 3}>
       <div className="card card-pad space-y-4">
         <div>
           <h2 className="section-title">تنظیمات ارسال مستقیم ایمیل (SMTP — اختیاری)</h2>
@@ -840,7 +942,7 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
                   setSmtpPass('');
                   setClearSmtpPass(true);
                 }}
-                className="mt-1 text-[11px] text-rose-700 hover:underline"
+                className="mt-1 text-[11px] text-danger hover:underline"
               >
                 حذف رمز ذخیره‌شده فعلی
               </button>
@@ -862,6 +964,8 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
           </div>
         </div>
       </div>
+
+      </section>
 
       <div className="flex justify-end">
         <SubmitButton className="btn btn-primary">

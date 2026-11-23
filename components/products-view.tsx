@@ -16,6 +16,8 @@ import { SubmitButton } from '@/components/submit-button';
 import { formatCurrency, formatNumber } from '@/lib/format';
 import { NumberField } from '@/components/number-field';
 import { UNIT_LABEL, UNITS } from '@/lib/labels';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
 
 export interface ProductRow {
   id: string;
@@ -138,16 +140,12 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold">مدیریت کالا و قیمت</h1>
-          <p className="muted mt-1 text-xs">
-            کاتالوگ کالاهای فولادی با مشخصات فنی و قیمت واحد؛ قیمت‌های ثبت‌شده در پیش‌فاکتور به‌صورت
-            Snapshot حفظ می‌شوند.
-          </p>
-        </div>
-        {isAdmin && (
-          <div className="flex flex-wrap gap-2">
+      <PageHeader
+        title="مدیریت کالا و قیمت"
+        description="کاتالوگ کالاهای فولادی با مشخصات فنی و قیمت واحد؛ قیمت‌های ثبت‌شده در پیش‌فاکتور به‌صورت Snapshot حفظ می‌شوند."
+        actions={
+          isAdmin ? (
+            <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className="btn btn-secondary"
@@ -161,25 +159,26 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
               <Layers className="h-4 w-4" />
               مدیریت دسته‌بندی‌ها
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                setDismissedSave(state);
-                setEditing(null);
-                setOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              افزودن کالا
-            </button>
-          </div>
-        )}
-      </div>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setDismissedSave(state);
+                  setEditing(null);
+                  setOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                افزودن کالا
+              </button>
+            </div>
+          ) : null
+        }
+      />
 
       <div className="card card-pad flex flex-wrap items-center gap-3">
         <div className="relative min-w-[220px] flex-1">
-          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-steel-400" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -217,13 +216,15 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#D7DEE5] bg-white p-10 text-center">
-          <Package className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-3 text-sm font-semibold">کالایی یافت نشد</p>
-          <p className="muted mt-1 text-xs">
-            {products.length === 0 ? 'برای شروع، اولین کالا را تعریف کنید.' : 'عبارت جستجو را تغییر دهید.'}
-          </p>
-        </div>
+        <EmptyState
+          icon={Package}
+          title="کالایی یافت نشد"
+          hint={
+            products.length === 0
+              ? 'برای شروع، اولین کالا را تعریف کنید.'
+              : 'عبارت جستجو یا فیلترها را تغییر دهید.'
+          }
+        />
       ) : (
         <div className="table-wrap">
           <table className="data">
@@ -346,8 +347,8 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
             <div
               className={`rounded-lg border p-2.5 text-xs ${
                 visibleState.ok
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-rose-200 bg-rose-50 text-rose-800'
+                  ? 'alert-success'
+                  : 'alert-danger'
               }`}
             >
               {visibleState.message}
@@ -396,7 +397,7 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
                 {isAdmin && (
                   <button
                     type="button"
-                    className="text-[11px] font-semibold text-[#347C65] hover:underline"
+                    className="text-[11px] font-semibold text-accent-600 hover:underline"
                     onClick={() => {
                       setDismissedCategory(categoryState);
                       setDismissedDeleteCategory(deleteCategoryState);
@@ -544,7 +545,7 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
             کالا فعال است و در فرم صدور پیش‌فاکتور نمایش داده شود
           </label>
 
-          <div className="flex justify-end gap-2 border-t border-[#D7DEE5] pt-3">
+          <div className="flex justify-end gap-2 border-t border-line pt-3">
             <button
               type="button"
               className="btn btn-secondary"
@@ -580,8 +581,8 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
             <div
               className={`rounded-lg border p-2.5 text-xs ${
                 visibleCategoryState.ok
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-rose-200 bg-rose-50 text-rose-800'
+                  ? 'alert-success'
+                  : 'alert-danger'
               }`}
             >
               {visibleCategoryState.message}
@@ -591,8 +592,8 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
             <div
               className={`rounded-lg border p-2.5 text-xs ${
                 visibleDeleteCategoryState.ok
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-rose-200 bg-rose-50 text-rose-800'
+                  ? 'alert-success'
+                  : 'alert-danger'
               }`}
             >
               {visibleDeleteCategoryState.message}
@@ -649,9 +650,9 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
         </form>
 
         {categories.length > 0 && (
-          <div className="mt-4 border-t border-[#D7DEE5] pt-3">
+          <div className="mt-4 border-t border-line pt-3">
             <h4 className="mb-2 text-xs font-semibold">دسته‌بندی‌های موجود ({formatNumber(categories.length, 0)})</h4>
-            <ul className="max-h-60 divide-y divide-[#EEF1F4] overflow-y-auto text-xs">
+            <ul className="max-h-60 divide-y divide-line overflow-y-auto text-xs">
               {categories.map((category) => (
                 <li key={category.id} className="flex items-center justify-between gap-2 py-2">
                   <div className="flex min-w-0 items-center gap-2">
@@ -673,7 +674,7 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
                       <form action={deleteCategoryActionState}>
                         <input type="hidden" name="id" value={category.id} />
                         <SubmitButton
-                          className="btn btn-ghost btn-sm !px-2 !text-rose-600 hover:!bg-rose-50"
+                          className="btn btn-ghost btn-sm !px-2 !text-danger"
                           pendingLabel="..."
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -692,7 +693,7 @@ export function ProductsView({ products, categories, currency, isAdmin }: Props)
         <form action={deleteAction} className="space-y-4">
           <input type="hidden" name="id" value={confirmId ?? ''} />
           {visibleDeleteState.message && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-800">
+            <div className="alert alert-danger">
               {visibleDeleteState.message}
             </div>
           )}

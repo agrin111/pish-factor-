@@ -8,6 +8,9 @@ import { initialActionState } from '@/lib/forms';
 import { Modal } from '@/components/modal';
 import { SubmitButton } from '@/components/submit-button';
 import { CUSTOMER_TYPE_LABEL } from '@/lib/labels';
+import { formatNumber } from '@/lib/format';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
 
 export interface CustomerRow {
   id: string;
@@ -94,22 +97,20 @@ export function CustomersView({ customers, isAdmin }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold">مدیریت مشتریان</h1>
-          <p className="muted mt-1 text-xs">
-            ثبت و نگهداری اطلاعات مشتریان حقیقی و حقوقی — جستجو بر اساس نام، موبایل و شرکت
-          </p>
-        </div>
-        <button type="button" onClick={openCreate} className="btn btn-primary">
-          <Plus className="h-4 w-4" />
-          ثبت مشتری جدید
-        </button>
-      </div>
+      <PageHeader
+        title="مدیریت مشتریان"
+        description="ثبت و نگهداری اطلاعات مشتریان حقیقی و حقوقی — جستجو بر اساس نام، موبایل و شرکت"
+        actions={
+          <button type="button" onClick={openCreate} className="btn btn-primary">
+            <Plus className="h-4 w-4" />
+            ثبت مشتری جدید
+          </button>
+        }
+      />
 
       <div className="card card-pad flex flex-wrap items-center gap-3">
         <div className="relative min-w-[240px] flex-1">
-          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-steel-400" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -132,20 +133,20 @@ export function CustomersView({ customers, isAdmin }: Props) {
           {new Intl.NumberFormat('fa-IR').format(filtered.length)} مشتری
         </span>
         {deleteState.message && !deleteState.ok && (
-          <span className="text-xs text-rose-700">{deleteState.message}</span>
+          <span className="text-xs text-danger">{deleteState.message}</span>
         )}
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#D7DEE5] bg-white p-10 text-center">
-          <UserRound className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-3 text-sm font-semibold">مشتری‌ای یافت نشد</p>
-          <p className="muted mt-1 text-xs">
-            {customers.length === 0
+        <EmptyState
+          icon={UserRound}
+          title="مشتری‌ای یافت نشد"
+          hint={
+            customers.length === 0
               ? 'برای شروع، اولین مشتری را ثبت کنید.'
-              : 'عبارت جستجو را تغییر دهید.'}
-          </p>
-        </div>
+              : 'عبارت جستجو یا فیلتر نوع مشتری را تغییر دهید.'
+          }
+        />
       ) : (
         <div className="table-wrap">
           <table className="data">
@@ -198,7 +199,7 @@ export function CustomersView({ customers, isAdmin }: Props) {
                     </span>
                   </td>
                   <td>{customer.city ?? '—'}</td>
-                  <td className="numeric">{customer.quotationCount}</td>
+                  <td className="numeric">{formatNumber(customer.quotationCount, 0)}</td>
                   <td className="numeric">{customer.createdAtLabel}</td>
                   <td>
                     <div className="row-actions">
@@ -247,8 +248,8 @@ export function CustomersView({ customers, isAdmin }: Props) {
             <div
               className={`rounded-lg border p-2.5 text-xs ${
                 visibleSaveState.ok
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-rose-200 bg-rose-50 text-rose-800'
+                  ? 'alert-success'
+                  : 'alert-danger'
               }`}
             >
               {visibleSaveState.message}
@@ -392,7 +393,7 @@ export function CustomersView({ customers, isAdmin }: Props) {
             />
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-[#D7DEE5] pt-3">
+          <div className="flex justify-end gap-2 border-t border-line pt-3">
             <button
               type="button"
               className="btn btn-secondary"
@@ -417,8 +418,8 @@ export function CustomersView({ customers, isAdmin }: Props) {
             <div
               className={`rounded-lg border p-2.5 text-xs ${
                 visibleDeleteState.ok
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-rose-200 bg-rose-50 text-rose-800'
+                  ? 'alert-success'
+                  : 'alert-danger'
               }`}
             >
               {visibleDeleteState.message}

@@ -43,12 +43,12 @@ export function UpdateToast({
     <div
       role="status"
       aria-live="polite"
-      className="no-print fixed bottom-5 left-5 z-50 w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-[#D7DEE5] bg-white/95 shadow-[0_20px_50px_-15px_rgba(23,37,53,0.35)] backdrop-blur-md"
+      className="no-print fixed bottom-5 left-5 z-50 w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-line bg-white/95 shadow-[0_20px_50px_-15px_rgba(15,26,36,0.35)] backdrop-blur-md"
     >
-      <div className="h-1 w-full bg-gradient-to-l from-[#347c65] via-[#5fb79b] to-[#172535]" />
+      <div className="h-1 w-full bg-accent-500" />
       <div className="p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf6f1] text-[#2c6a56]">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-success">
             {state.status === 'downloaded' ? (
               <CheckCircle2 className="h-5 w-5" />
             ) : state.status === 'downloading' ? (
@@ -60,7 +60,7 @@ export function UpdateToast({
 
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <h4 className="text-sm font-bold text-[#172535]">
+              <h4 className="text-sm font-bold text-ink-900">
                 {state.status === 'downloading'
                   ? `در حال دریافت نسخه ${versionLabel}`
                   : state.status === 'downloaded'
@@ -71,7 +71,7 @@ export function UpdateToast({
                 <button
                   type="button"
                   onClick={() => setDismissedKey(versionKey)}
-                  className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  className="rounded-lg p-1 text-steel-400 transition hover:bg-surface-2 hover:text-steel-600"
                   aria-label="بستن اعلان به‌روزرسانی"
                 >
                   <X className="h-4 w-4" />
@@ -79,7 +79,7 @@ export function UpdateToast({
               )}
             </div>
 
-            <p className="mt-1 text-xs leading-relaxed text-[#48586a]">
+            <p className="mt-1 text-xs leading-relaxed text-steel-600">
               {state.status === 'downloading'
                 ? 'دریافت فایل اجرایی جدید در حال انجام است؛ می‌توانید به کار خود ادامه دهید.'
                 : state.status === 'downloaded'
@@ -89,13 +89,13 @@ export function UpdateToast({
 
             {state.status === 'downloading' && (
               <div className="mt-3 space-y-1.5">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-[#eef1f4]">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-line">
                   <div
-                    className="h-full rounded-full bg-[#347c65] transition-all duration-200"
+                    className="h-full rounded-full bg-accent-600 transition-all duration-200"
                     style={{ width: `${state.percent ?? 0}%` }}
                   />
                 </div>
-                <div className="numeric flex justify-between text-[11px] text-[#6b7a88]">
+                <div className="numeric flex justify-between text-[11px] text-steel-500">
                   <span>پیشرفت دریافت</span>
                   <span>{toPersianDigits(state.percent ?? 0)}٪</span>
                 </div>
